@@ -1,6 +1,13 @@
-export const APP_VERSION = '1.1.2';
+export const APP_VERSION = '1.1.3';
 
 export const CHANGELOG = [
+  {
+    version: '1.1.3',
+    date: '04/04/2026',
+    features: [
+      'Correção: Botões de editar e excluir times agora estão sempre visíveis (melhoria para telas touch/iPad)'
+    ]
+  },
   {
     version: '1.1.2',
     date: '04/04/2026',

@@ -486,10 +486,10 @@ export default function App() {
                           style={{ backgroundColor: team.color }}
                         />
                         <span className="flex-1 font-bold text-lg">{team.name}</span>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex gap-1 opacity-100 transition-opacity">
                           <button 
                             onClick={() => setEditingTeam(team)}
-                            className="p-2 hover:bg-white/10 rounded-lg"
+                            className="p-2 hover:bg-white/10 text-zinc-400 hover:text-white rounded-lg transition-colors"
                           >
                             <SettingsIcon size={20} />
                           </button>
@@ -499,7 +499,7 @@ export default function App() {
                                 setTeams(teams.filter(t => t.id !== team.id));
                               }
                             }}
-                            className="p-2 hover:bg-red-500/20 text-red-400 rounded-lg"
+                            className="p-2 hover:bg-red-500/20 text-zinc-500 hover:text-red-400 rounded-lg transition-colors"
                           >
                             <X size={20} />
                           </button>
