@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Settings as SettingsIcon, RotateCcw, Plus, Minus, X, Check, ChevronRight, ChevronLeft, ArrowLeftRight, Info, RefreshCw } from 'lucide-react';
+import { Settings as SettingsIcon, RotateCcw, Plus, Minus, X, Check, ChevronRight, ChevronLeft, ArrowLeftRight, Info, RefreshCw, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { Team, MatchState, DEFAULT_TEAMS } from './types';
@@ -55,6 +55,7 @@ export default function App() {
       setHistory: [],
       useSets: true,
       displayTeamNames: false,
+      historyViewMode: 'sets',
       sidesSwapped: false,
       showSwapButton: true,
       autoSwapOnRotate: false,
@@ -71,6 +72,7 @@ export default function App() {
           setHistory: parsed.setHistory || [],
           useSets: parsed.useSets !== undefined ? parsed.useSets : true,
           displayTeamNames: parsed.displayTeamNames !== undefined ? parsed.displayTeamNames : false,
+          historyViewMode: parsed.historyViewMode || 'sets',
           sidesSwapped: parsed.sidesSwapped || false,
           showSwapButton: parsed.showSwapButton !== undefined ? parsed.showSwapButton : true,
           autoSwapOnRotate: parsed.autoSwapOnRotate || false,
@@ -83,8 +85,19 @@ export default function App() {
     return defaultMatch;
   });
 
+  const [tournamentHistory, setTournamentHistory] = useState<any[]>(() => {
+    const saved = localStorage.getItem('placar_tournament_history');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('placar_tournament_history', JSON.stringify(tournamentHistory));
+  }, [tournamentHistory]);
+
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isChangelogOpen, setIsChangelogOpen] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
 
   useEffect(() => {
@@ -206,14 +219,29 @@ export default function App() {
 
   const resetMatch = useCallback((force = false) => {
     const performReset = () => {
-      setMatch(prev => ({
-        ...prev,
-        team1Score: 0,
-        team2Score: 0,
-        team1Sets: 0,
-        team2Sets: 0,
-        setHistory: [],
-      }));
+      setMatch(prev => {
+        if (prev.team1Score > 0 || prev.team2Score > 0 || prev.team1Sets > 0 || prev.team2Sets > 0) {
+          const finalSetHistory = (prev.team1Score > 0 || prev.team2Score > 0) 
+            ? [...prev.setHistory, { team1: prev.team1Score, team2: prev.team2Score }]
+            : prev.setHistory;
+
+          setTournamentHistory(th => [...th, {
+            id: Date.now().toString(),
+            date: new Date().toISOString(),
+            team1: { id: prev.team1Id, score: prev.team1Score, sets: prev.team1Sets },
+            team2: { id: prev.team2Id, score: prev.team2Score, sets: prev.team2Sets },
+            setHistory: finalSetHistory
+          }]);
+        }
+        return {
+          ...prev,
+          team1Score: 0,
+          team2Score: 0,
+          team1Sets: 0,
+          team2Sets: 0,
+          setHistory: [],
+        };
+      });
     };
 
     if (force) {
@@ -221,6 +249,35 @@ export default function App() {
     } else {
       performReset();
     }
+  }, []);
+
+  const handleTeamChange = useCallback((teamIndex: 1 | 2, newTeamId: string) => {
+    setMatch(prev => {
+      // Save current match to history if there's any score
+      if (prev.team1Score > 0 || prev.team2Score > 0 || prev.team1Sets > 0 || prev.team2Sets > 0) {
+        const finalSetHistory = (prev.team1Score > 0 || prev.team2Score > 0) 
+          ? [...prev.setHistory, { team1: prev.team1Score, team2: prev.team2Score }]
+          : prev.setHistory;
+
+        setTournamentHistory(th => [...th, {
+          id: Date.now().toString(),
+          date: new Date().toISOString(),
+          team1: { id: prev.team1Id, score: prev.team1Score, sets: prev.team1Sets },
+          team2: { id: prev.team2Id, score: prev.team2Score, sets: prev.team2Sets },
+          setHistory: finalSetHistory
+        }]);
+      }
+      
+      return {
+        ...prev,
+        [teamIndex === 1 ? 'team1Id' : 'team2Id']: newTeamId,
+        team1Score: 0,
+        team2Score: 0,
+        team1Sets: 0,
+        team2Sets: 0,
+        setHistory: [],
+      };
+    });
   }, []);
 
   const team1 = teams.find(t => t.id === match.team1Id) || teams[0];
@@ -292,7 +349,7 @@ export default function App() {
 
           {/* Decrement Button */}
           <button 
-            className={`absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] ${match.sidesSwapped ? 'right-8' : 'left-8'} p-6 bg-black/20 rounded-full hover:bg-black/40 transition-colors border border-white/5 z-20`}
+            className={`absolute bottom-[calc(6rem+env(safe-area-inset-bottom))] ${match.sidesSwapped ? 'right-8' : 'left-8'} p-6 bg-black/20 rounded-full hover:bg-black/40 transition-colors border border-white/5 z-20`}
             onClick={(e) => {
               e.stopPropagation();
               updateScore(1, -1);
@@ -341,7 +398,7 @@ export default function App() {
 
           {/* Decrement Button */}
           <button 
-            className={`absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] ${match.sidesSwapped ? 'left-8' : 'right-8'} p-6 bg-black/20 rounded-full hover:bg-black/40 transition-colors border border-white/5 z-20`}
+            className={`absolute bottom-[calc(6rem+env(safe-area-inset-bottom))] ${match.sidesSwapped ? 'left-8' : 'right-8'} p-6 bg-black/20 rounded-full hover:bg-black/40 transition-colors border border-white/5 z-20`}
             onClick={(e) => {
               e.stopPropagation();
               updateScore(2, -1);
@@ -352,19 +409,45 @@ export default function App() {
         </div>
       </div>
 
-      {/* Set History */}
+      {/* Bottom History Display */}
       {match.useSets && (
-        <div className="absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 flex gap-4 z-20">
-          {(match.setHistory || []).map((set, i) => (
-            <div key={i} className="bg-white px-4 py-2 rounded-xl border border-white/10 flex flex-col items-center min-w-[80px] shadow-xl">
-              <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">Set {i + 1}</span>
-              <div className={`flex gap-2 font-bold text-lg ${match.sidesSwapped ? 'flex-row-reverse' : 'flex-row'}`}>
-                <span style={{ color: team1.color }}>{set.team1}</span>
-                <span className="text-zinc-200">|</span>
-                <span style={{ color: team2.color }}>{set.team2}</span>
+        <div className="absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 flex gap-4 z-20 max-w-[90vw] overflow-x-auto custom-scrollbar pb-2 px-4">
+          {match.historyViewMode === 'sets' ? (
+            // Set History (Current Match)
+            (match.setHistory || []).map((set, i) => (
+              <div key={i} className="bg-white px-4 py-2 rounded-xl border border-white/10 flex flex-col items-center min-w-[80px] shadow-xl shrink-0">
+                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">Set {i + 1}</span>
+                <div className={`flex gap-2 font-bold text-lg ${match.sidesSwapped ? 'flex-row-reverse' : 'flex-row'}`}>
+                  <span style={{ color: team1.color }}>{set.team1}</span>
+                  <span className="text-zinc-200">|</span>
+                  <span style={{ color: team2.color }}>{set.team2}</span>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            // Tournament History (Past Matches)
+            tournamentHistory.flatMap((hist, i) => {
+              const t1 = teams.find(t => t.id === hist.team1.id) || { color: '#fff', name: 'Time 1' };
+              const t2 = teams.find(t => t.id === hist.team2.id) || { color: '#fff', name: 'Time 2' };
+              
+              const setsToRender = hist.setHistory && hist.setHistory.length > 0 
+                ? hist.setHistory 
+                : [{ team1: hist.team1.score, team2: hist.team2.score }];
+
+              return setsToRender.map((set: any, setIndex: number) => (
+                <div key={`hist-${hist.id}-${i}-${setIndex}`} className="bg-white px-4 py-2 rounded-xl border border-white/10 flex flex-col items-center min-w-[80px] shadow-xl shrink-0">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">
+                    {hist.setHistory && hist.setHistory.length > 1 ? `P${i + 1} - Set ${setIndex + 1}` : `Partida ${i + 1}`}
+                  </span>
+                  <div className={`flex gap-2 font-bold text-lg ${match.sidesSwapped ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <span style={{ color: t1.color }} title={t1.name}>{set.team1}</span>
+                    <span className="text-zinc-200">|</span>
+                    <span style={{ color: t2.color }} title={t2.name}>{set.team2}</span>
+                  </div>
+                </div>
+              ));
+            })
+          )}
         </div>
       )}
 
@@ -412,7 +495,7 @@ export default function App() {
         )}
         <button 
           className="p-5 bg-black/40 backdrop-blur-xl rounded-full hover:bg-black/60 transition-all border border-white/10 shadow-2xl active:scale-90"
-          onClick={() => resetMatch(true)}
+          onClick={() => setShowResetConfirm(true)}
           title="Zerar placar"
         >
           <RotateCcw size={36} />
@@ -458,7 +541,7 @@ export default function App() {
                       <select 
                         className="w-full bg-zinc-800 border border-white/10 rounded-2xl p-5 text-xl appearance-none focus:ring-2 focus:ring-blue-500 outline-none"
                         value={match.team1Id}
-                        onChange={(e) => setMatch(prev => ({ ...prev, team1Id: e.target.value }))}
+                        onChange={(e) => handleTeamChange(1, e.target.value)}
                       >
                         {teams.map(t => (
                           <option key={t.id} value={t.id}>{t.name}</option>
@@ -475,7 +558,7 @@ export default function App() {
                       <select 
                         className="w-full bg-zinc-800 border border-white/10 rounded-2xl p-5 text-xl appearance-none focus:ring-2 focus:ring-blue-500 outline-none"
                         value={match.team2Id}
-                        onChange={(e) => setMatch(prev => ({ ...prev, team2Id: e.target.value }))}
+                        onChange={(e) => handleTeamChange(2, e.target.value)}
                       >
                         {teams.map(t => (
                           <option key={t.id} value={t.id}>{t.name}</option>
@@ -579,12 +662,40 @@ export default function App() {
                     </div>
 
                     <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
-                      <span className="font-bold text-zinc-300">Mostrar Nomes</span>
+                      <span className="font-bold text-zinc-300">Mostrar Nomes dos Times</span>
                       <button 
                         onClick={() => setMatch(prev => ({ ...prev, displayTeamNames: !prev.displayTeamNames }))}
                         className={`w-14 h-8 rounded-full transition-colors relative ${match.displayTeamNames ? 'bg-blue-600' : 'bg-zinc-700'}`}
                       >
                         <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${match.displayTeamNames ? 'left-7' : 'left-1'}`} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-zinc-300">Modo de Histórico</span>
+                        <span className="text-[10px] text-zinc-500">
+                          {match.historyViewMode === 'sets' ? 'Mostrando Sets da Partida Atual' : 'Mostrando Partidas Anteriores'}
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => setMatch(prev => ({ ...prev, historyViewMode: prev.historyViewMode === 'sets' ? 'tournament' : 'sets' }))}
+                        className={`w-14 h-8 rounded-full transition-colors relative ${match.historyViewMode === 'tournament' ? 'bg-blue-600' : 'bg-zinc-700'}`}
+                      >
+                        <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${match.historyViewMode === 'tournament' ? 'left-7' : 'left-1'}`} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-red-400">Limpar Torneio</span>
+                        <span className="text-[10px] text-zinc-500">Apaga todo o histórico de partidas anteriores</span>
+                      </div>
+                      <button 
+                        onClick={() => setShowClearConfirm(true)}
+                        className="p-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl transition-colors"
+                      >
+                        <Trash2 size={20} />
                       </button>
                     </div>
 
@@ -749,6 +860,88 @@ export default function App() {
                 </motion.div>
               )}
             </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Reset Match Confirmation Modal */}
+      <AnimatePresence>
+        {showResetConfirm && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-zinc-900 border border-white/10 p-8 rounded-3xl max-w-sm w-full shadow-2xl"
+            >
+              <h3 className="text-2xl font-bold text-white mb-3">Zerar Placar?</h3>
+              <p className="text-zinc-400 text-sm mb-8 leading-relaxed">
+                Tem certeza que deseja zerar o placar da partida atual?
+              </p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setShowResetConfirm(false)}
+                  className="flex-1 py-4 rounded-xl font-bold bg-zinc-800 text-white hover:bg-zinc-700 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={() => {
+                    resetMatch(true);
+                    setShowResetConfirm(false);
+                  }}
+                  className="flex-1 py-4 rounded-xl font-bold bg-red-600 text-white hover:bg-red-500 transition-colors"
+                >
+                  Sim, zerar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Clear Tournament Confirmation Modal */}
+      <AnimatePresence>
+        {showClearConfirm && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-zinc-900 border border-white/10 p-8 rounded-3xl max-w-sm w-full shadow-2xl"
+            >
+              <h3 className="text-2xl font-bold text-white mb-3">Limpar Torneio?</h3>
+              <p className="text-zinc-400 text-sm mb-8 leading-relaxed">
+                Tem certeza que deseja apagar todo o histórico do torneio? Esta ação não pode ser desfeita.
+              </p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setShowClearConfirm(false)}
+                  className="flex-1 py-4 rounded-xl font-bold bg-zinc-800 text-white hover:bg-zinc-700 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={() => {
+                    setTournamentHistory([]);
+                    setShowClearConfirm(false);
+                  }}
+                  className="flex-1 py-4 rounded-xl font-bold bg-red-600 text-white hover:bg-red-500 transition-colors"
+                >
+                  Sim, limpar
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -16,6 +16,7 @@ export interface MatchState {
   setHistory: { team1: number; team2: number }[];
   useSets: boolean;
   displayTeamNames: boolean;
+  historyViewMode: 'sets' | 'tournament';
   sidesSwapped: boolean;
   showSwapButton: boolean;
   autoSwapOnRotate: boolean;

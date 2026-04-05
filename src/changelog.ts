@@ -1,6 +1,25 @@
-export const APP_VERSION = '1.1.6';
+export const APP_VERSION = '1.1.8';
 
 export const CHANGELOG = [
+  {
+    version: '1.1.8',
+    date: '05/04/2026',
+    features: [
+      'Visual revertido para o layout clássico com os sets no topo e histórico embaixo',
+      'Adicionado Histórico de Torneio: agora o aplicativo salva o histórico de partidas anteriores',
+      'Nova opção nas configurações para alternar entre "Sets da Partida Atual" e "Partidas Anteriores" no histórico inferior',
+      'O histórico de partidas mostra as cores e pontuações dos times que jogaram'
+    ]
+  },
+  {
+    version: '1.1.7',
+    date: '05/04/2026',
+    features: [
+      'Novo layout do placar: Nomes dos times agora ficam sempre visíveis no topo',
+      'Novo layout do placar: Contagem de sets movida para a parte inferior para maior clareza',
+      'Removido o histórico de sets que causava confusão visual'
+    ]
+  },
   {
     version: '1.1.6',
     date: '05/04/2026',

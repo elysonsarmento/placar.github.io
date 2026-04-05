@@ -15,7 +15,7 @@ export default defineConfig(({mode}) => {
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
         manifest: {
-          id: '/?v=1.1.6',
+          id: '/?v=1.1.8',
           name: 'Placar PWA',
           short_name: 'Placar',
           description: 'Placar Esportivo PWA',
