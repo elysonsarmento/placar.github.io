@@ -16,6 +16,10 @@ export interface MatchState {
   setHistory: { team1: number; team2: number }[];
   useSets: boolean;
   displayTeamNames: boolean;
+  sidesSwapped: boolean;
+  showSwapButton: boolean;
+  autoSwapOnRotate: boolean;
+  keepScreenAwake: boolean;
 }
 
 export const DEFAULT_TEAMS: Team[] = [

@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { Settings as SettingsIcon, RotateCcw, Plus, Minus, X, Check, ChevronRight, ChevronLeft } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Settings as SettingsIcon, RotateCcw, Plus, Minus, X, Check, ChevronRight, ChevronLeft, ArrowLeftRight, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Team, MatchState, DEFAULT_TEAMS } from './types';
+import { APP_VERSION, CHANGELOG } from './changelog';
 
 export default function App() {
   const [teams, setTeams] = useState<Team[]>(() => {
@@ -28,6 +29,10 @@ export default function App() {
       setHistory: [],
       useSets: true,
       displayTeamNames: false,
+      sidesSwapped: false,
+      showSwapButton: true,
+      autoSwapOnRotate: false,
+      keepScreenAwake: false,
     };
     
     if (saved) {
@@ -40,6 +45,10 @@ export default function App() {
           setHistory: parsed.setHistory || [],
           useSets: parsed.useSets !== undefined ? parsed.useSets : true,
           displayTeamNames: parsed.displayTeamNames !== undefined ? parsed.displayTeamNames : false,
+          sidesSwapped: parsed.sidesSwapped || false,
+          showSwapButton: parsed.showSwapButton !== undefined ? parsed.showSwapButton : true,
+          autoSwapOnRotate: parsed.autoSwapOnRotate || false,
+          keepScreenAwake: parsed.keepScreenAwake || false,
         };
       } catch (e) {
         return defaultMatch;
@@ -49,7 +58,90 @@ export default function App() {
   });
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isChangelogOpen, setIsChangelogOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
+
+  useEffect(() => {
+    const lastSeen = localStorage.getItem('placar_last_version');
+    if (lastSeen !== APP_VERSION) {
+      setIsChangelogOpen(true);
+      localStorage.setItem('placar_last_version', APP_VERSION);
+    }
+  }, []);
+
+  const getOrientation = () => {
+    if (typeof window === 'undefined') return 0;
+    if (window.screen && window.screen.orientation && window.screen.orientation.angle !== undefined) {
+      return window.screen.orientation.angle;
+    }
+    return window.orientation || 0;
+  };
+
+  const lastOrientation = useRef(getOrientation());
+  const wakeLockRef = useRef<any>(null);
+
+  useEffect(() => {
+    const requestWakeLock = async () => {
+      if (match.keepScreenAwake && 'wakeLock' in navigator) {
+        try {
+          wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
+        } catch (err) {
+          console.error('Wake Lock error:', err);
+        }
+      }
+    };
+
+    const releaseWakeLock = async () => {
+      if (wakeLockRef.current !== null) {
+        try {
+          await wakeLockRef.current.release();
+          wakeLockRef.current = null;
+        } catch (err) {
+          console.error('Wake Lock release error:', err);
+        }
+      }
+    };
+
+    if (match.keepScreenAwake) {
+      requestWakeLock();
+    } else {
+      releaseWakeLock();
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && match.keepScreenAwake) {
+        requestWakeLock();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      releaseWakeLock();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [match.keepScreenAwake]);
+
+  useEffect(() => {
+    const handleOrientationChange = () => {
+      const currentOrientation = getOrientation();
+      
+      setMatch(prev => {
+        if (prev.autoSwapOnRotate) {
+          const diff = Math.abs(currentOrientation - (lastOrientation.current as number));
+          if (diff === 180) {
+            return { ...prev, sidesSwapped: !prev.sidesSwapped };
+          }
+        }
+        return prev;
+      });
+      
+      lastOrientation.current = currentOrientation;
+    };
+
+    window.addEventListener('orientationchange', handleOrientationChange);
+    return () => window.removeEventListener('orientationchange', handleOrientationChange);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('placar_teams', JSON.stringify(teams));
@@ -119,7 +211,7 @@ export default function App() {
       {/* Sets Display (Top Center) */}
       {match.useSets && (
         <div className="absolute top-[env(safe-area-inset-top)] left-1/2 -translate-x-1/2 flex gap-4 z-30 p-4 pt-8">
-          <div className="flex gap-2">
+          <div className={`flex gap-2 ${match.sidesSwapped ? 'flex-row-reverse' : 'flex-row'}`}>
             <div 
               className="bg-white px-6 py-2 rounded-xl border border-white/20 text-4xl font-black tabular-nums min-w-[80px] text-center shadow-xl"
               style={{ color: team1.color }}
@@ -137,7 +229,7 @@ export default function App() {
       )}
 
       {/* Main Scoreboard */}
-      <div className="flex h-full w-full">
+      <div className={`flex h-full w-full ${match.sidesSwapped ? 'flex-row-reverse' : 'flex-row'}`}>
         {/* Team 1 Area */}
         <div 
           className="relative flex-1 flex flex-col items-center justify-center cursor-pointer active:opacity-95 transition-all pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]"
@@ -174,7 +266,7 @@ export default function App() {
 
           {/* Decrement Button */}
           <button 
-            className="absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] left-8 p-6 bg-black/20 rounded-full hover:bg-black/40 transition-colors border border-white/5 z-20"
+            className={`absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] ${match.sidesSwapped ? 'right-8' : 'left-8'} p-6 bg-black/20 rounded-full hover:bg-black/40 transition-colors border border-white/5 z-20`}
             onClick={(e) => {
               e.stopPropagation();
               updateScore(1, -1);
@@ -223,7 +315,7 @@ export default function App() {
 
           {/* Decrement Button */}
           <button 
-            className="absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] right-8 p-6 bg-black/20 rounded-full hover:bg-black/40 transition-colors border border-white/5 z-20"
+            className={`absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] ${match.sidesSwapped ? 'left-8' : 'right-8'} p-6 bg-black/20 rounded-full hover:bg-black/40 transition-colors border border-white/5 z-20`}
             onClick={(e) => {
               e.stopPropagation();
               updateScore(2, -1);
@@ -240,7 +332,7 @@ export default function App() {
           {(match.setHistory || []).map((set, i) => (
             <div key={i} className="bg-white px-4 py-2 rounded-xl border border-white/10 flex flex-col items-center min-w-[80px] shadow-xl">
               <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">Set {i + 1}</span>
-              <div className="flex gap-2 font-bold text-lg">
+              <div className={`flex gap-2 font-bold text-lg ${match.sidesSwapped ? 'flex-row-reverse' : 'flex-row'}`}>
                 <span style={{ color: team1.color }}>{set.team1}</span>
                 <span className="text-zinc-200">|</span>
                 <span style={{ color: team2.color }}>{set.team2}</span>
@@ -268,7 +360,7 @@ export default function App() {
                 {matchWinner === 1 ? team1.name : team2.name}
               </div>
               <div className="text-2xl font-medium text-zinc-500">
-                Placar Final: {match.team1Sets} - {match.team2Sets}
+                Placar Final: {match.sidesSwapped ? match.team2Sets : match.team1Sets} - {match.sidesSwapped ? match.team1Sets : match.team2Sets}
               </div>
               <button 
                 onClick={() => resetMatch(true)}
@@ -283,6 +375,15 @@ export default function App() {
 
       {/* Global Controls */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-6 z-20">
+        {match.showSwapButton && (
+          <button 
+            className="p-5 bg-black/40 backdrop-blur-xl rounded-full hover:bg-black/60 transition-all border border-white/10 shadow-2xl active:scale-90"
+            onClick={() => setMatch(prev => ({ ...prev, sidesSwapped: !prev.sidesSwapped }))}
+            title="Trocar Lados"
+          >
+            <ArrowLeftRight size={36} />
+          </button>
+        )}
         <button 
           className="p-5 bg-black/40 backdrop-blur-xl rounded-full hover:bg-black/60 transition-all border border-white/10 shadow-2xl active:scale-90"
           onClick={() => resetMatch(true)}
@@ -319,9 +420,10 @@ export default function App() {
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-10 grid grid-cols-1 lg:grid-cols-3 gap-12">
-                {/* Match Setup */}
-                <section className="space-y-8">
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-10 grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div className="space-y-12">
+                  {/* Match Setup */}
+                  <section className="space-y-8">
                   <h3 className="text-sm font-black text-zinc-500 uppercase tracking-[0.2em]">Partida</h3>
                   
                   <div className="space-y-6">
@@ -357,11 +459,79 @@ export default function App() {
                   </div>
                 </section>
 
+                {/* Teams Management */}
+                <section className="space-y-8">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-sm font-black text-zinc-500 uppercase tracking-[0.2em]">Times</h3>
+                    <button 
+                      onClick={() => {
+                        const newTeam: Team = { id: Date.now().toString(), name: 'Novo Time', color: '#6366f1' };
+                        setTeams([...teams, newTeam]);
+                        setEditingTeam(newTeam);
+                      }}
+                      className="p-2 bg-blue-600 hover:bg-blue-500 rounded-xl transition-colors"
+                    >
+                      <Plus size={24} />
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {teams.map(team => (
+                      <div 
+                        key={team.id}
+                        className="flex items-center gap-4 p-4 bg-zinc-800/40 rounded-2xl border border-white/5 group hover:border-white/20 transition-all"
+                      >
+                        <div 
+                          className="w-12 h-12 rounded-xl shadow-inner"
+                          style={{ backgroundColor: team.color }}
+                        />
+                        <span className="flex-1 font-bold text-lg">{team.name}</span>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button 
+                            onClick={() => setEditingTeam(team)}
+                            className="p-2 hover:bg-white/10 rounded-lg"
+                          >
+                            <SettingsIcon size={20} />
+                          </button>
+                          <button 
+                            onClick={() => {
+                              if (teams.length > 2) {
+                                setTeams(teams.filter(t => t.id !== team.id));
+                              }
+                            }}
+                            className="p-2 hover:bg-red-500/20 text-red-400 rounded-lg"
+                          >
+                            <X size={20} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              </div>
+
+              <div>
                 {/* Rules Setup */}
                 <section className="space-y-8">
                   <h3 className="text-sm font-black text-zinc-500 uppercase tracking-[0.2em]">Regras</h3>
                   
                   <div className="space-y-6">
+                    <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-zinc-300">Novidades da Versão</span>
+                        <span className="text-[10px] text-zinc-500">Versão atual: {APP_VERSION}</span>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          setIsSettingsOpen(false);
+                          setIsChangelogOpen(true);
+                        }}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors text-sm"
+                      >
+                        Ver Novidades
+                      </button>
+                    </div>
+
                     <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
                       <span className="font-bold text-zinc-300">Mostrar Nomes</span>
                       <button 
@@ -369,6 +539,45 @@ export default function App() {
                         className={`w-14 h-8 rounded-full transition-colors relative ${match.displayTeamNames ? 'bg-blue-600' : 'bg-zinc-700'}`}
                       >
                         <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${match.displayTeamNames ? 'left-7' : 'left-1'}`} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-zinc-300">Botão de Trocar Lados</span>
+                        <span className="text-[10px] text-zinc-500">Exibe o botão central de inversão</span>
+                      </div>
+                      <button 
+                        onClick={() => setMatch(prev => ({ ...prev, showSwapButton: !prev.showSwapButton }))}
+                        className={`w-14 h-8 rounded-full transition-colors relative ${match.showSwapButton ? 'bg-blue-600' : 'bg-zinc-700'}`}
+                      >
+                        <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${match.showSwapButton ? 'left-7' : 'left-1'}`} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-zinc-300">Inverter ao Girar iPad</span>
+                        <span className="text-[10px] text-zinc-500">Mantém os times no mesmo lado físico</span>
+                      </div>
+                      <button 
+                        onClick={() => setMatch(prev => ({ ...prev, autoSwapOnRotate: !prev.autoSwapOnRotate }))}
+                        className={`w-14 h-8 rounded-full transition-colors relative ${match.autoSwapOnRotate ? 'bg-blue-600' : 'bg-zinc-700'}`}
+                      >
+                        <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${match.autoSwapOnRotate ? 'left-7' : 'left-1'}`} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-zinc-300">Manter Tela Ligada</span>
+                        <span className="text-[10px] text-zinc-500">Evita que o dispositivo bloqueie a tela</span>
+                      </div>
+                      <button 
+                        onClick={() => setMatch(prev => ({ ...prev, keepScreenAwake: !prev.keepScreenAwake }))}
+                        className={`w-14 h-8 rounded-full transition-colors relative ${match.keepScreenAwake ? 'bg-blue-600' : 'bg-zinc-700'}`}
+                      >
+                        <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${match.keepScreenAwake ? 'left-7' : 'left-1'}`} />
                       </button>
                     </div>
 
@@ -431,60 +640,11 @@ export default function App() {
                     )}
                   </div>
                 </section>
-
-                {/* Teams Management */}
-                <section className="space-y-8">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-sm font-black text-zinc-500 uppercase tracking-[0.2em]">Times</h3>
-                    <button 
-                      onClick={() => {
-                        const newTeam: Team = { id: Date.now().toString(), name: 'Novo Time', color: '#6366f1' };
-                        setTeams([...teams, newTeam]);
-                        setEditingTeam(newTeam);
-                      }}
-                      className="p-2 bg-blue-600 hover:bg-blue-500 rounded-xl transition-colors"
-                    >
-                      <Plus size={24} />
-                    </button>
-                  </div>
-
-                  <div className="space-y-3">
-                    {teams.map(team => (
-                      <div 
-                        key={team.id}
-                        className="flex items-center gap-4 p-4 bg-zinc-800/40 rounded-2xl border border-white/5 group hover:border-white/20 transition-all"
-                      >
-                        <div 
-                          className="w-12 h-12 rounded-xl shadow-inner"
-                          style={{ backgroundColor: team.color }}
-                        />
-                        <span className="flex-1 font-bold text-lg">{team.name}</span>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button 
-                            onClick={() => setEditingTeam(team)}
-                            className="p-2 hover:bg-white/10 rounded-lg"
-                          >
-                            <SettingsIcon size={20} />
-                          </button>
-                          <button 
-                            onClick={() => {
-                              if (teams.length > 2) {
-                                setTeams(teams.filter(t => t.id !== team.id));
-                              }
-                            }}
-                            className="p-2 hover:bg-red-500/20 text-red-400 rounded-lg"
-                          >
-                            <X size={20} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </section>
               </div>
             </div>
+          </div>
 
-            {/* Team Edit Overlay */}
+          {/* Team Edit Overlay */}
             <AnimatePresence>
               {editingTeam && (
                 <motion.div 
@@ -543,6 +703,66 @@ export default function App() {
                 </motion.div>
               )}
             </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Changelog Modal */}
+      <AnimatePresence>
+        {isChangelogOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/95 backdrop-blur-2xl z-50 flex items-center justify-center p-8"
+          >
+            <div className="bg-zinc-900 w-full max-w-2xl rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10 flex flex-col max-h-[92vh]">
+              <div className="p-8 border-b border-white/10 flex justify-between items-center bg-zinc-800/30">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-blue-500/20 text-blue-400 rounded-2xl">
+                    <Info size={32} />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-bold tracking-tight">Novidades</h2>
+                    <p className="text-zinc-400">O que há de novo no Placar Pro</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsChangelogOpen(false)}
+                  className="p-3 hover:bg-white/10 rounded-full transition-colors"
+                >
+                  <X size={32} />
+                </button>
+              </div>
+
+              <div className="p-8 overflow-y-auto space-y-8 custom-scrollbar">
+                {CHANGELOG.map((log, index) => (
+                  <div key={log.version} className={`relative ${index !== CHANGELOG.length - 1 ? 'pb-8 border-b border-white/5' : ''}`}>
+                    <div className="flex items-baseline gap-3 mb-4">
+                      <h3 className="text-2xl font-bold text-white">v{log.version}</h3>
+                      <span className="text-sm font-medium text-zinc-500">{log.date}</span>
+                    </div>
+                    <ul className="space-y-3">
+                      {log.features.map((feature, i) => (
+                        <li key={i} className="flex items-start gap-3 text-zinc-300">
+                          <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                          <span className="leading-relaxed">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="p-6 border-t border-white/10 bg-zinc-800/30 flex justify-end">
+                <button 
+                  onClick={() => setIsChangelogOpen(false)}
+                  className="px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl transition-colors"
+                >
+                  Continuar
+                </button>
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
