@@ -1,6 +1,22 @@
-export const APP_VERSION = '1.1.4';
+export const APP_VERSION = '1.1.6';
 
 export const CHANGELOG = [
+  {
+    version: '1.1.6',
+    date: '05/04/2026',
+    features: [
+      'Atualização do Vite para a versão mais recente (v8)',
+      'Resolução de conflitos de dependências do PWA utilizando overrides no package.json'
+    ]
+  },
+  {
+    version: '1.1.5',
+    date: '05/04/2026',
+    features: [
+      'Adicionado botão para buscar e instalar atualizações manualmente na tela de configurações',
+      'Correção de conflitos de dependências que causavam erro no GitHub Actions'
+    ]
+  },
   {
     version: '1.1.4',
     date: '05/04/2026',

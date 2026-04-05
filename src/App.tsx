@@ -4,12 +4,38 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Settings as SettingsIcon, RotateCcw, Plus, Minus, X, Check, ChevronRight, ChevronLeft, ArrowLeftRight, Info } from 'lucide-react';
+import { Settings as SettingsIcon, RotateCcw, Plus, Minus, X, Check, ChevronRight, ChevronLeft, ArrowLeftRight, Info, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useRegisterSW } from 'virtual:pwa-register/react';
 import { Team, MatchState, DEFAULT_TEAMS } from './types';
 import { APP_VERSION, CHANGELOG } from './changelog';
 
 export default function App() {
+  const {
+    needRefresh: [needRefresh, setNeedRefresh],
+    updateServiceWorker,
+  } = useRegisterSW({
+    onRegistered(r) {
+      console.log('SW Registered: ' + r);
+    },
+    onRegisterError(error) {
+      console.log('SW registration error', error);
+    },
+  });
+
+  const checkForUpdates = () => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then((registration) => {
+        registration.update().then(() => {
+          // The update check is complete. If there's an update, needRefresh will become true.
+          alert('Verificação concluída. Se houver atualização, o botão de atualizar aparecerá.');
+        });
+      });
+    } else {
+      alert('Service Worker não suportado neste navegador.');
+    }
+  };
+
   const [teams, setTeams] = useState<Team[]>(() => {
     const saved = localStorage.getItem('placar_teams');
     return saved ? JSON.parse(saved) : DEFAULT_TEAMS;
@@ -521,15 +547,35 @@ export default function App() {
                         <span className="font-bold text-zinc-300">Novidades da Versão</span>
                         <span className="text-[10px] text-zinc-500">Versão atual: {APP_VERSION}</span>
                       </div>
-                      <button 
-                        onClick={() => {
-                          setIsSettingsOpen(false);
-                          setIsChangelogOpen(true);
-                        }}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors text-sm"
-                      >
-                        Ver Novidades
-                      </button>
+                      <div className="flex gap-2">
+                        {needRefresh && (
+                          <button 
+                            onClick={() => updateServiceWorker(true)}
+                            className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl transition-colors text-sm flex items-center gap-2 animate-pulse"
+                          >
+                            <RefreshCw size={16} />
+                            Atualizar App
+                          </button>
+                        )}
+                        {!needRefresh && (
+                          <button 
+                            onClick={checkForUpdates}
+                            className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-white font-bold rounded-xl transition-colors text-sm flex items-center gap-2"
+                          >
+                            <RefreshCw size={16} />
+                            Buscar
+                          </button>
+                        )}
+                        <button 
+                          onClick={() => {
+                            setIsSettingsOpen(false);
+                            setIsChangelogOpen(true);
+                          }}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors text-sm"
+                        >
+                          Ver Novidades
+                        </button>
+                      </div>
                     </div>
 
                     <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
