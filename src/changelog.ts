@@ -1,6 +1,15 @@
-export const APP_VERSION = '1.1.0';
+export const APP_VERSION = '1.1.1';
 
 export const CHANGELOG = [
+  {
+    version: '1.1.1',
+    date: '04/04/2026',
+    features: [
+      'Ajuste na altura da tela para preencher a área segura (safe area) em dispositivos iOS',
+      'Correção da barra de rolagem (scrollbar) no tema escuro',
+      'Reorganização do layout da tela de configurações em duas colunas'
+    ]
+  },
   {
     version: '1.1.0',
     date: '04/04/2026',
