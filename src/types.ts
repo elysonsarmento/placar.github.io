@@ -15,6 +15,7 @@ export interface MatchState {
   pointsToWinSet: number;
   setHistory: { team1: number; team2: number }[];
   useSets: boolean;
+  displayTeamNames: boolean;
 }
 
 export const DEFAULT_TEAMS: Team[] = [

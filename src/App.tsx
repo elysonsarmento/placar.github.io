@@ -27,6 +27,7 @@ export default function App() {
       pointsToWinSet: 25,
       setHistory: [],
       useSets: true,
+      displayTeamNames: false,
     };
     
     if (saved) {
@@ -38,6 +39,7 @@ export default function App() {
           // Ensure arrays are initialized if missing in old storage
           setHistory: parsed.setHistory || [],
           useSets: parsed.useSets !== undefined ? parsed.useSets : true,
+          displayTeamNames: parsed.displayTeamNames !== undefined ? parsed.displayTeamNames : false,
         };
       } catch (e) {
         return defaultMatch;
@@ -118,10 +120,16 @@ export default function App() {
       {match.useSets && (
         <div className="absolute top-0 left-1/2 -translate-x-1/2 flex gap-4 z-30 p-4">
           <div className="flex gap-2">
-            <div className="bg-white/10 backdrop-blur-md px-6 py-2 rounded-xl border border-white/10 text-4xl font-black tabular-nums min-w-[80px] text-center">
+            <div 
+              className="bg-white px-6 py-2 rounded-xl border border-white/20 text-4xl font-black tabular-nums min-w-[80px] text-center shadow-xl"
+              style={{ color: team1.color }}
+            >
               {match.team1Sets}
             </div>
-            <div className="bg-white/10 backdrop-blur-md px-6 py-2 rounded-xl border border-white/10 text-4xl font-black tabular-nums min-w-[80px] text-center">
+            <div 
+              className="bg-white px-6 py-2 rounded-xl border border-white/20 text-4xl font-black tabular-nums min-w-[80px] text-center shadow-xl"
+              style={{ color: team2.color }}
+            >
               {match.team2Sets}
             </div>
           </div>
@@ -136,9 +144,11 @@ export default function App() {
           style={{ backgroundColor: team1.color }}
           onClick={() => !matchWinner && updateScore(1, 1)}
         >
-          <div className="absolute top-16 text-4xl font-bold uppercase tracking-[0.3em] opacity-90 drop-shadow-md">
-            {team1.name}
-          </div>
+          {match.displayTeamNames && (
+            <div className="absolute top-16 text-4xl font-bold uppercase tracking-[0.3em] opacity-90 drop-shadow-md">
+              {team1.name}
+            </div>
+          )}
           
           <div className={`font-black leading-none tabular-nums drop-shadow-2xl transition-all duration-300 ${match.team1Score >= 100 ? 'text-[14rem]' : match.team1Score >= 10 ? 'text-[20rem]' : 'text-[32rem]'}`}>
             {match.team1Score}
@@ -183,9 +193,11 @@ export default function App() {
           style={{ backgroundColor: team2.color }}
           onClick={() => !matchWinner && updateScore(2, 1)}
         >
-          <div className="absolute top-16 text-4xl font-bold uppercase tracking-[0.3em] opacity-90 drop-shadow-md">
-            {team2.name}
-          </div>
+          {match.displayTeamNames && (
+            <div className="absolute top-16 text-4xl font-bold uppercase tracking-[0.3em] opacity-90 drop-shadow-md">
+              {team2.name}
+            </div>
+          )}
           
           <div className={`font-black leading-none tabular-nums drop-shadow-2xl transition-all duration-300 ${match.team2Score >= 100 ? 'text-[14rem]' : match.team2Score >= 10 ? 'text-[20rem]' : 'text-[32rem]'}`}>
             {match.team2Score}
@@ -226,11 +238,11 @@ export default function App() {
       {match.useSets && (
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-4 z-20">
           {(match.setHistory || []).map((set, i) => (
-            <div key={i} className="bg-black/40 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 flex flex-col items-center min-w-[80px]">
-              <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Set {i + 1}</span>
+            <div key={i} className="bg-white px-4 py-2 rounded-xl border border-white/10 flex flex-col items-center min-w-[80px] shadow-xl">
+              <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">Set {i + 1}</span>
               <div className="flex gap-2 font-bold text-lg">
                 <span style={{ color: team1.color }}>{set.team1}</span>
-                <span className="opacity-20">|</span>
+                <span className="text-zinc-200">|</span>
                 <span style={{ color: team2.color }}>{set.team2}</span>
               </div>
             </div>
@@ -350,6 +362,16 @@ export default function App() {
                   <h3 className="text-sm font-black text-zinc-500 uppercase tracking-[0.2em]">Regras</h3>
                   
                   <div className="space-y-6">
+                    <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
+                      <span className="font-bold text-zinc-300">Mostrar Nomes</span>
+                      <button 
+                        onClick={() => setMatch(prev => ({ ...prev, displayTeamNames: !prev.displayTeamNames }))}
+                        className={`w-14 h-8 rounded-full transition-colors relative ${match.displayTeamNames ? 'bg-blue-600' : 'bg-zinc-700'}`}
+                      >
+                        <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${match.displayTeamNames ? 'left-7' : 'left-1'}`} />
+                      </button>
+                    </div>
+
                     <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
                       <span className="font-bold text-zinc-300">Usar Sets</span>
                       <button 
