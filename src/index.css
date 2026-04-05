@@ -2,9 +2,7 @@
 
 @layer base {
   html, body, #root {
-    @apply w-full overflow-hidden;
-    height: 100dvh;
-    width: 100dvw;
+    @apply w-full h-full overflow-hidden;
     background-color: #000;
     color-scheme: dark;
     -webkit-tap-highlight-color: transparent;
