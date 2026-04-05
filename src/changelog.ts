@@ -1,6 +1,14 @@
-export const APP_VERSION = '1.1.3';
+export const APP_VERSION = '1.1.4';
 
 export const CHANGELOG = [
+  {
+    version: '1.1.4',
+    date: '05/04/2026',
+    features: [
+      'Atualização de todos os pacotes e dependências do sistema para as versões mais recentes',
+      'Melhorias de performance e segurança'
+    ]
+  },
   {
     version: '1.1.3',
     date: '04/04/2026',
