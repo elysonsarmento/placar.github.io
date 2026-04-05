@@ -115,10 +115,10 @@ export default function App() {
   const matchWinner = match.useSets ? (match.team1Sets >= setsToWin ? 1 : match.team2Sets >= setsToWin ? 2 : null) : null;
 
   return (
-    <div className="fixed inset-0 bg-black text-white font-sans overflow-hidden select-none">
+    <div className="fixed inset-0 text-white font-sans overflow-hidden select-none bg-black">
       {/* Sets Display (Top Center) */}
       {match.useSets && (
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 flex gap-4 z-30 p-4">
+        <div className="absolute top-[env(safe-area-inset-top)] left-1/2 -translate-x-1/2 flex gap-4 z-30 p-4 pt-8">
           <div className="flex gap-2">
             <div 
               className="bg-white px-6 py-2 rounded-xl border border-white/20 text-4xl font-black tabular-nums min-w-[80px] text-center shadow-xl"
@@ -140,12 +140,12 @@ export default function App() {
       <div className="flex h-full w-full">
         {/* Team 1 Area */}
         <div 
-          className="relative flex-1 flex flex-col items-center justify-center cursor-pointer active:opacity-95 transition-all"
+          className="relative flex-1 flex flex-col items-center justify-center cursor-pointer active:opacity-95 transition-all pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]"
           style={{ backgroundColor: team1.color }}
           onClick={() => !matchWinner && updateScore(1, 1)}
         >
           {match.displayTeamNames && (
-            <div className="absolute top-16 text-4xl font-bold uppercase tracking-[0.3em] opacity-90 drop-shadow-md">
+            <div className="absolute top-[calc(4rem+env(safe-area-inset-top))] text-4xl font-bold uppercase tracking-[0.3em] opacity-90 drop-shadow-md">
               {team1.name}
             </div>
           )}
@@ -174,7 +174,7 @@ export default function App() {
 
           {/* Decrement Button */}
           <button 
-            className="absolute bottom-8 left-8 p-6 bg-black/20 rounded-full hover:bg-black/40 transition-colors border border-white/5"
+            className="absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] left-8 p-6 bg-black/20 rounded-full hover:bg-black/40 transition-colors border border-white/5 z-20"
             onClick={(e) => {
               e.stopPropagation();
               updateScore(1, -1);
@@ -189,12 +189,12 @@ export default function App() {
 
         {/* Team 2 Area */}
         <div 
-          className="relative flex-1 flex flex-col items-center justify-center cursor-pointer active:opacity-95 transition-all"
+          className="relative flex-1 flex flex-col items-center justify-center cursor-pointer active:opacity-95 transition-all pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]"
           style={{ backgroundColor: team2.color }}
           onClick={() => !matchWinner && updateScore(2, 1)}
         >
           {match.displayTeamNames && (
-            <div className="absolute top-16 text-4xl font-bold uppercase tracking-[0.3em] opacity-90 drop-shadow-md">
+            <div className="absolute top-[calc(4rem+env(safe-area-inset-top))] text-4xl font-bold uppercase tracking-[0.3em] opacity-90 drop-shadow-md">
               {team2.name}
             </div>
           )}
@@ -223,7 +223,7 @@ export default function App() {
 
           {/* Decrement Button */}
           <button 
-            className="absolute bottom-8 right-8 p-6 bg-black/20 rounded-full hover:bg-black/40 transition-colors border border-white/5"
+            className="absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] right-8 p-6 bg-black/20 rounded-full hover:bg-black/40 transition-colors border border-white/5 z-20"
             onClick={(e) => {
               e.stopPropagation();
               updateScore(2, -1);
@@ -236,7 +236,7 @@ export default function App() {
 
       {/* Set History */}
       {match.useSets && (
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-4 z-20">
+        <div className="absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 flex gap-4 z-20">
           {(match.setHistory || []).map((set, i) => (
             <div key={i} className="bg-white px-4 py-2 rounded-xl border border-white/10 flex flex-col items-center min-w-[80px] shadow-xl">
               <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">Set {i + 1}</span>
