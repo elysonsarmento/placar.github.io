@@ -136,11 +136,11 @@ export default function App() {
           style={{ backgroundColor: team1.color }}
           onClick={() => !matchWinner && updateScore(1, 1)}
         >
-          <div className="absolute top-24 text-4xl font-bold uppercase tracking-[0.3em] opacity-90 drop-shadow-md">
+          <div className="absolute top-16 text-4xl font-bold uppercase tracking-[0.3em] opacity-90 drop-shadow-md">
             {team1.name}
           </div>
           
-          <div className="text-[32rem] font-black leading-none tabular-nums drop-shadow-2xl">
+          <div className={`font-black leading-none tabular-nums drop-shadow-2xl transition-all duration-300 ${match.team1Score >= 100 ? 'text-[14rem]' : match.team1Score >= 10 ? 'text-[20rem]' : 'text-[32rem]'}`}>
             {match.team1Score}
           </div>
 
@@ -183,11 +183,11 @@ export default function App() {
           style={{ backgroundColor: team2.color }}
           onClick={() => !matchWinner && updateScore(2, 1)}
         >
-          <div className="absolute top-24 text-4xl font-bold uppercase tracking-[0.3em] opacity-90 drop-shadow-md">
+          <div className="absolute top-16 text-4xl font-bold uppercase tracking-[0.3em] opacity-90 drop-shadow-md">
             {team2.name}
           </div>
           
-          <div className="text-[32rem] font-black leading-none tabular-nums drop-shadow-2xl">
+          <div className={`font-black leading-none tabular-nums drop-shadow-2xl transition-all duration-300 ${match.team2Score >= 100 ? 'text-[14rem]' : match.team2Score >= 10 ? 'text-[20rem]' : 'text-[32rem]'}`}>
             {match.team2Score}
           </div>
 
