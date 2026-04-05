@@ -1,0 +1,15 @@
+{
+  "short_name": "Placar Pro",
+  "name": "Placar Pro PWA",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/5358/5358641.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#000000"
+}

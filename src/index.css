@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@layer base {
+  html, body, #root {
+    @apply h-full w-full overflow-hidden bg-black;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  /* Prevent text selection during scoring */
+  * {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* Allow selection in inputs */
+  input, select, textarea {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+}
