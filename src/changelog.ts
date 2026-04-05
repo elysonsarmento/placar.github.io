@@ -1,6 +1,14 @@
-export const APP_VERSION = '1.1.1';
+export const APP_VERSION = '1.1.2';
 
 export const CHANGELOG = [
+  {
+    version: '1.1.2',
+    date: '04/04/2026',
+    features: [
+      'Forçado modo tela cheia (fullscreen) no PWA para remover barras do sistema',
+      'Ajuste agressivo de altura (100vh) para cobrir a safe area inferior'
+    ]
+  },
   {
     version: '1.1.1',
     date: '04/04/2026',

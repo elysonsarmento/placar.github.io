@@ -207,7 +207,7 @@ export default function App() {
   const matchWinner = match.useSets ? (match.team1Sets >= setsToWin ? 1 : match.team2Sets >= setsToWin ? 2 : null) : null;
 
   return (
-    <div className="fixed inset-0 text-white font-sans overflow-hidden select-none bg-black">
+    <div className="fixed top-0 left-0 w-[100vw] h-[100vh] text-white font-sans overflow-hidden select-none bg-black">
       {/* Sets Display (Top Center) */}
       {match.useSets && (
         <div className="absolute top-[env(safe-area-inset-top)] left-1/2 -translate-x-1/2 flex gap-4 z-30 p-4 pt-8">

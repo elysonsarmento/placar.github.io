@@ -15,13 +15,13 @@ export default defineConfig(({mode}) => {
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
         manifest: {
-          id: '/?v=1.1.1',
+          id: '/?v=1.1.2',
           name: 'Placar PWA',
           short_name: 'Placar',
           description: 'Placar Esportivo PWA',
           theme_color: '#000000',
           background_color: '#000000',
-          display: 'standalone',
+          display: 'fullscreen',
           icons: [
             {
               src: 'https://ui-avatars.com/api/?name=PLACAR&background=2563eb&color=fff&size=192',
