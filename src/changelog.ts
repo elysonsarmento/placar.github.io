@@ -1,6 +1,17 @@
-export const APP_VERSION = '1.1.8';
+export const APP_VERSION = '1.1.9';
 
 export const CHANGELOG = [
+  {
+    version: '1.1.9',
+    date: '06/04/2026',
+    features: [
+      'Correção do bug de fechamento duplo de set (debounce no botão)',
+      'Nova opção "Vantagem (2 pontos)" nas configurações',
+      'Melhoria na lógica de "Travar Placar no Set" para respeitar a vantagem',
+      'Correção da persistência offline e limpeza total do torneio',
+      'Atualização do ambiente de deploy para Node.js 24'
+    ]
+  },
   {
     version: '1.1.8',
     date: '05/04/2026',

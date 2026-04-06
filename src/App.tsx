@@ -98,6 +98,7 @@ export default function App() {
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isChangelogOpen, setIsChangelogOpen] = useState(false);
+  const [isProcessingSet, setIsProcessingSet] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
@@ -187,6 +188,9 @@ export default function App() {
   }, []);
 
   const nextSet = useCallback((winner: 1 | 2) => {
+    if (isProcessingSet) return;
+    setIsProcessingSet(true);
+
     setMatch((prev: MatchState) => ({
       ...prev,
       setHistory: [...prev.setHistory, { team1: prev.team1Score, team2: prev.team2Score }],
@@ -195,7 +199,10 @@ export default function App() {
       team1Sets: winner === 1 ? prev.team1Sets + 1 : prev.team1Sets,
       team2Sets: winner === 2 ? prev.team2Sets + 1 : prev.team2Sets,
     }));
-  }, []);
+
+    // Reset processing state after a short delay to prevent double-clicks
+    setTimeout(() => setIsProcessingSet(false), 500);
+  }, [isProcessingSet]);
 
   const resetMatch = useCallback((force = false) => {
     const performReset = () => {
