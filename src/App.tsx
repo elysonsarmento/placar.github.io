@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Settings as SettingsIcon, RotateCcw, Plus, Minus, X, Check, ChevronRight, ChevronLeft, ArrowLeftRight, Info, RefreshCw, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
-import { Team, MatchState, DEFAULT_TEAMS } from './types';
+import { Team, MatchState, TournamentMatch, DEFAULT_TEAMS } from './types';
 import { APP_VERSION, CHANGELOG } from './changelog';
 
 export default function App() {
@@ -15,10 +15,10 @@ export default function App() {
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
   } = useRegisterSW({
-    onRegistered(r) {
+    onRegistered(r: ServiceWorkerRegistration | undefined) {
       console.log('SW Registered: ' + r);
     },
-    onRegisterError(error) {
+    onRegisterError(error: any) {
       console.log('SW registration error', error);
     },
   });
@@ -58,8 +58,9 @@ export default function App() {
       historyViewMode: 'sets',
       sidesSwapped: false,
       showSwapButton: true,
-      autoSwapOnRotate: false,
       keepScreenAwake: false,
+      stopAtSetPoint: false,
+      useAdvantage: true,
     };
     
     if (saved) {
@@ -75,8 +76,9 @@ export default function App() {
           historyViewMode: parsed.historyViewMode || 'sets',
           sidesSwapped: parsed.sidesSwapped || false,
           showSwapButton: parsed.showSwapButton !== undefined ? parsed.showSwapButton : true,
-          autoSwapOnRotate: parsed.autoSwapOnRotate || false,
           keepScreenAwake: parsed.keepScreenAwake || false,
+          stopAtSetPoint: parsed.stopAtSetPoint || false,
+          useAdvantage: parsed.useAdvantage !== undefined ? parsed.useAdvantage : true,
         };
       } catch (e) {
         return defaultMatch;
@@ -85,7 +87,7 @@ export default function App() {
     return defaultMatch;
   });
 
-  const [tournamentHistory, setTournamentHistory] = useState<any[]>(() => {
+  const [tournamentHistory, setTournamentHistory] = useState<TournamentMatch[]>(() => {
     const saved = localStorage.getItem('placar_tournament_history');
     return saved ? JSON.parse(saved) : [];
   });
@@ -108,15 +110,6 @@ export default function App() {
     }
   }, []);
 
-  const getOrientation = () => {
-    if (typeof window === 'undefined') return 0;
-    if (window.screen && window.screen.orientation && window.screen.orientation.angle !== undefined) {
-      return window.screen.orientation.angle;
-    }
-    return window.orientation || 0;
-  };
-
-  const lastOrientation = useRef(getOrientation());
   const wakeLockRef = useRef<any>(null);
 
   useEffect(() => {
@@ -162,27 +155,6 @@ export default function App() {
   }, [match.keepScreenAwake]);
 
   useEffect(() => {
-    const handleOrientationChange = () => {
-      const currentOrientation = getOrientation();
-      
-      setMatch(prev => {
-        if (prev.autoSwapOnRotate) {
-          const diff = Math.abs(currentOrientation - (lastOrientation.current as number));
-          if (diff === 180) {
-            return { ...prev, sidesSwapped: !prev.sidesSwapped };
-          }
-        }
-        return prev;
-      });
-      
-      lastOrientation.current = currentOrientation;
-    };
-
-    window.addEventListener('orientationchange', handleOrientationChange);
-    return () => window.removeEventListener('orientationchange', handleOrientationChange);
-  }, []);
-
-  useEffect(() => {
     localStorage.setItem('placar_teams', JSON.stringify(teams));
   }, [teams]);
 
@@ -191,15 +163,23 @@ export default function App() {
   }, [match]);
 
   const updateScore = useCallback((teamNum: 1 | 2, delta: number) => {
-    setMatch(prev => {
+    setMatch((prev: MatchState) => {
       const scoreKey = teamNum === 1 ? 'team1Score' : 'team2Score';
+      
+      // Stop at set point logic
+      if (delta > 0 && prev.stopAtSetPoint) {
+        const t1Wins = prev.team1Score >= prev.pointsToWinSet && (!prev.useAdvantage || prev.team1Score >= prev.team2Score + 2);
+        const t2Wins = prev.team2Score >= prev.pointsToWinSet && (!prev.useAdvantage || prev.team2Score >= prev.team1Score + 2);
+        if (t1Wins || t2Wins) return prev;
+      }
+
       const newScore = Math.max(0, prev[scoreKey] + delta);
       return { ...prev, [scoreKey]: newScore };
     });
   }, []);
 
   const updateSets = useCallback((teamNum: 1 | 2, delta: number) => {
-    setMatch(prev => {
+    setMatch((prev: MatchState) => {
       const setKey = teamNum === 1 ? 'team1Sets' : 'team2Sets';
       const newSets = Math.max(0, Math.min(prev.maxSets, prev[setKey] + delta));
       return { ...prev, [setKey]: newSets };
@@ -207,7 +187,7 @@ export default function App() {
   }, []);
 
   const nextSet = useCallback((winner: 1 | 2) => {
-    setMatch(prev => ({
+    setMatch((prev: MatchState) => ({
       ...prev,
       setHistory: [...prev.setHistory, { team1: prev.team1Score, team2: prev.team2Score }],
       team1Score: 0,
@@ -219,13 +199,13 @@ export default function App() {
 
   const resetMatch = useCallback((force = false) => {
     const performReset = () => {
-      setMatch(prev => {
+      setMatch((prev: MatchState) => {
         if (prev.team1Score > 0 || prev.team2Score > 0 || prev.team1Sets > 0 || prev.team2Sets > 0) {
           const finalSetHistory = (prev.team1Score > 0 || prev.team2Score > 0) 
             ? [...prev.setHistory, { team1: prev.team1Score, team2: prev.team2Score }]
             : prev.setHistory;
 
-          setTournamentHistory(th => [...th, {
+          setTournamentHistory((th: TournamentMatch[]) => [...th, {
             id: Date.now().toString(),
             date: new Date().toISOString(),
             team1: { id: prev.team1Id, score: prev.team1Score, sets: prev.team1Sets },
@@ -252,14 +232,14 @@ export default function App() {
   }, []);
 
   const handleTeamChange = useCallback((teamIndex: 1 | 2, newTeamId: string) => {
-    setMatch(prev => {
+    setMatch((prev: MatchState) => {
       // Save current match to history if there's any score
       if (prev.team1Score > 0 || prev.team2Score > 0 || prev.team1Sets > 0 || prev.team2Sets > 0) {
         const finalSetHistory = (prev.team1Score > 0 || prev.team2Score > 0) 
           ? [...prev.setHistory, { team1: prev.team1Score, team2: prev.team2Score }]
           : prev.setHistory;
 
-        setTournamentHistory(th => [...th, {
+        setTournamentHistory((th: TournamentMatch[]) => [...th, {
           id: Date.now().toString(),
           date: new Date().toISOString(),
           team1: { id: prev.team1Id, score: prev.team1Score, sets: prev.team1Sets },
@@ -283,8 +263,8 @@ export default function App() {
   const team1 = teams.find(t => t.id === match.team1Id) || teams[0];
   const team2 = teams.find(t => t.id === match.team2Id) || teams[1];
 
-  const team1WinsSet = match.useSets && match.team1Score >= match.pointsToWinSet && match.team1Score >= match.team2Score + 2;
-  const team2WinsSet = match.useSets && match.team2Score >= match.pointsToWinSet && match.team2Score >= match.team1Score + 2;
+  const team1WinsSet = match.useSets && match.team1Score >= match.pointsToWinSet && (!match.useAdvantage || match.team1Score >= match.team2Score + 2);
+  const team2WinsSet = match.useSets && match.team2Score >= match.pointsToWinSet && (!match.useAdvantage || match.team2Score >= match.team1Score + 2);
 
   const setsToWin = Math.ceil(match.maxSets / 2);
   const matchWinner = match.useSets ? (match.team1Sets >= setsToWin ? 1 : match.team2Sets >= setsToWin ? 2 : null) : null;
@@ -714,14 +694,27 @@ export default function App() {
 
                     <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
                       <div className="flex flex-col">
-                        <span className="font-bold text-zinc-300">Inverter ao Girar iPad</span>
-                        <span className="text-[10px] text-zinc-500">Mantém os times no mesmo lado físico</span>
+                        <span className="font-bold text-zinc-300">Vantagem (2 pontos)</span>
+                        <span className="text-[10px] text-zinc-500">Exige diferença de 2 pontos para fechar</span>
                       </div>
                       <button 
-                        onClick={() => setMatch(prev => ({ ...prev, autoSwapOnRotate: !prev.autoSwapOnRotate }))}
-                        className={`w-14 h-8 rounded-full transition-colors relative ${match.autoSwapOnRotate ? 'bg-blue-600' : 'bg-zinc-700'}`}
+                        onClick={() => setMatch(prev => ({ ...prev, useAdvantage: !prev.useAdvantage }))}
+                        className={`w-14 h-8 rounded-full transition-colors relative ${match.useAdvantage ? 'bg-blue-600' : 'bg-zinc-700'}`}
                       >
-                        <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${match.autoSwapOnRotate ? 'left-7' : 'left-1'}`} />
+                        <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${match.useAdvantage ? 'left-7' : 'left-1'}`} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-zinc-300">Travar Placar no Set</span>
+                        <span className="text-[10px] text-zinc-500">Impede pontos extras após atingir o limite</span>
+                      </div>
+                      <button 
+                        onClick={() => setMatch(prev => ({ ...prev, stopAtSetPoint: !prev.stopAtSetPoint }))}
+                        className={`w-14 h-8 rounded-full transition-colors relative ${match.stopAtSetPoint ? 'bg-blue-600' : 'bg-zinc-700'}`}
+                      >
+                        <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${match.stopAtSetPoint ? 'left-7' : 'left-1'}`} />
                       </button>
                     </div>
 
@@ -934,6 +927,15 @@ export default function App() {
                 <button 
                   onClick={() => {
                     setTournamentHistory([]);
+                    localStorage.removeItem('placar_tournament_history');
+                    setMatch(prev => ({
+                      ...prev,
+                      team1Score: 0,
+                      team2Score: 0,
+                      team1Sets: 0,
+                      team2Sets: 0,
+                      setHistory: [],
+                    }));
                     setShowClearConfirm(false);
                   }}
                   className="flex-1 py-4 rounded-xl font-bold bg-red-600 text-white hover:bg-red-500 transition-colors"

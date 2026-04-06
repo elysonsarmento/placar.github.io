@@ -19,8 +19,17 @@ export interface MatchState {
   historyViewMode: 'sets' | 'tournament';
   sidesSwapped: boolean;
   showSwapButton: boolean;
-  autoSwapOnRotate: boolean;
   keepScreenAwake: boolean;
+  stopAtSetPoint: boolean;
+  useAdvantage: boolean;
+}
+
+export interface TournamentMatch {
+  id: string;
+  date: string;
+  team1: { id: string; score: number; sets: number };
+  team2: { id: string; score: number; sets: number };
+  setHistory: { team1: number; team2: number }[];
 }
 
 export const DEFAULT_TEAMS: Team[] = [
