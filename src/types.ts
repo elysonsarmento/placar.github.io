@@ -14,6 +14,7 @@ export interface MatchState {
   maxSets: number;
   pointsToWinSet: number;
   setHistory: { team1: number; team2: number }[];
+  pointHistory: (1 | 2)[];
   useSets: boolean;
   displayTeamNames: boolean;
   historyViewMode: 'sets' | 'tournament';

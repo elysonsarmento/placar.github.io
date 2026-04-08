@@ -53,6 +53,7 @@ export default function App() {
       maxSets: 3,
       pointsToWinSet: 25,
       setHistory: [],
+      pointHistory: [],
       useSets: true,
       displayTeamNames: false,
       historyViewMode: 'sets',
@@ -71,6 +72,7 @@ export default function App() {
           ...parsed,
           // Ensure arrays are initialized if missing in old storage
           setHistory: parsed.setHistory || [],
+          pointHistory: parsed.pointHistory || [],
           useSets: parsed.useSets !== undefined ? parsed.useSets : true,
           displayTeamNames: parsed.displayTeamNames !== undefined ? parsed.displayTeamNames : false,
           historyViewMode: parsed.historyViewMode || 'sets',
@@ -175,7 +177,23 @@ export default function App() {
       }
 
       const newScore = Math.max(0, prev[scoreKey] + delta);
-      return { ...prev, [scoreKey]: newScore };
+      
+      // Update point history
+      let newPointHistory = [...(prev.pointHistory || [])];
+      if (delta > 0) {
+        for (let i = 0; i < delta; i++) {
+          newPointHistory.push(teamNum);
+        }
+      } else if (delta < 0) {
+        for (let i = 0; i < Math.abs(delta); i++) {
+          const lastIndex = newPointHistory.lastIndexOf(teamNum);
+          if (lastIndex !== -1) {
+            newPointHistory.splice(lastIndex, 1);
+          }
+        }
+      }
+
+      return { ...prev, [scoreKey]: newScore, pointHistory: newPointHistory };
     });
   }, []);
 
@@ -198,6 +216,7 @@ export default function App() {
       team2Score: 0,
       team1Sets: winner === 1 ? prev.team1Sets + 1 : prev.team1Sets,
       team2Sets: winner === 2 ? prev.team2Sets + 1 : prev.team2Sets,
+      pointHistory: [],
     }));
 
     // Reset processing state after a short delay to prevent double-clicks
@@ -227,6 +246,7 @@ export default function App() {
           team1Sets: 0,
           team2Sets: 0,
           setHistory: [],
+          pointHistory: [],
         };
       });
     };
@@ -263,6 +283,7 @@ export default function App() {
         team1Sets: 0,
         team2Sets: 0,
         setHistory: [],
+        pointHistory: [],
       };
     });
   }, []);
@@ -299,10 +320,10 @@ export default function App() {
       )}
 
       {/* Main Scoreboard */}
-      <div className={`flex h-full w-full ${match.sidesSwapped ? 'flex-row-reverse' : 'flex-row'}`}>
+      <div className={`flex h-full w-full ${match.sidesSwapped ? 'flex-col-reverse landscape:flex-row-reverse' : 'flex-col landscape:flex-row'}`}>
         {/* Team 1 Area */}
         <div 
-          className="relative flex-1 flex flex-col items-center justify-center cursor-pointer active:opacity-95 transition-all pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]"
+          className="relative flex-1 flex flex-col items-center justify-center cursor-pointer active:opacity-95 transition-all pt-28 pb-12 landscape:pt-[env(safe-area-inset-top)] landscape:pb-[env(safe-area-inset-bottom)]"
           style={{ backgroundColor: team1.color }}
           onClick={() => !matchWinner && updateScore(1, 1)}
         >
@@ -312,7 +333,7 @@ export default function App() {
             </div>
           )}
           
-          <div className={`font-black leading-none tabular-nums drop-shadow-2xl transition-all duration-300 ${match.team1Score >= 100 ? 'text-[14rem]' : match.team1Score >= 10 ? 'text-[20rem]' : 'text-[32rem]'}`}>
+          <div className={`font-black leading-none tabular-nums drop-shadow-2xl transition-all duration-300 ${match.team1Score >= 100 ? 'text-[6rem] landscape:text-[14rem]' : match.team1Score >= 10 ? 'text-[10rem] landscape:text-[20rem]' : 'text-[12rem] landscape:text-[32rem]'}`}>
             {match.team1Score}
           </div>
 
@@ -336,22 +357,22 @@ export default function App() {
 
           {/* Decrement Button */}
           <button 
-            className={`absolute bottom-[calc(6rem+env(safe-area-inset-bottom))] ${match.sidesSwapped ? 'right-8' : 'left-8'} p-6 bg-black/20 rounded-full hover:bg-black/40 transition-colors border border-white/5 z-20`}
+            className={`absolute bottom-4 landscape:bottom-[calc(6rem+env(safe-area-inset-bottom))] ${match.sidesSwapped ? 'right-4 landscape:right-8' : 'left-4 landscape:left-8'} p-4 landscape:p-6 bg-black/20 rounded-full hover:bg-black/40 transition-colors border border-white/5 z-20`}
             onClick={(e) => {
               e.stopPropagation();
               updateScore(1, -1);
             }}
           >
-            <Minus size={48} />
+            <Minus className="w-8 h-8 landscape:w-12 landscape:h-12" />
           </button>
         </div>
 
         {/* Divider */}
-        <div className="w-1 bg-black/30 z-10" />
+        <div className="h-1 w-full landscape:w-1 landscape:h-full bg-black/30 z-10" />
 
         {/* Team 2 Area */}
         <div 
-          className="relative flex-1 flex flex-col items-center justify-center cursor-pointer active:opacity-95 transition-all pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]"
+          className="relative flex-1 flex flex-col items-center justify-center cursor-pointer active:opacity-95 transition-all pt-12 pb-36 landscape:pt-[env(safe-area-inset-top)] landscape:pb-[env(safe-area-inset-bottom)]"
           style={{ backgroundColor: team2.color }}
           onClick={() => !matchWinner && updateScore(2, 1)}
         >
@@ -361,7 +382,7 @@ export default function App() {
             </div>
           )}
           
-          <div className={`font-black leading-none tabular-nums drop-shadow-2xl transition-all duration-300 ${match.team2Score >= 100 ? 'text-[14rem]' : match.team2Score >= 10 ? 'text-[20rem]' : 'text-[32rem]'}`}>
+          <div className={`font-black leading-none tabular-nums drop-shadow-2xl transition-all duration-300 ${match.team2Score >= 100 ? 'text-[6rem] landscape:text-[14rem]' : match.team2Score >= 10 ? 'text-[10rem] landscape:text-[20rem]' : 'text-[12rem] landscape:text-[32rem]'}`}>
             {match.team2Score}
           </div>
 
@@ -385,58 +406,78 @@ export default function App() {
 
           {/* Decrement Button */}
           <button 
-            className={`absolute bottom-[calc(6rem+env(safe-area-inset-bottom))] ${match.sidesSwapped ? 'left-8' : 'right-8'} p-6 bg-black/20 rounded-full hover:bg-black/40 transition-colors border border-white/5 z-20`}
+            className={`absolute bottom-4 landscape:bottom-[calc(6rem+env(safe-area-inset-bottom))] ${match.sidesSwapped ? 'left-4 landscape:left-8' : 'right-4 landscape:right-8'} p-4 landscape:p-6 bg-black/20 rounded-full hover:bg-black/40 transition-colors border border-white/5 z-20`}
             onClick={(e) => {
               e.stopPropagation();
               updateScore(2, -1);
             }}
           >
-            <Minus size={48} />
+            <Minus className="w-8 h-8 landscape:w-12 landscape:h-12" />
           </button>
         </div>
       </div>
 
-      {/* Bottom History Display */}
-      {match.useSets && (
-        <div className="absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 flex gap-4 z-20 max-w-[90vw] overflow-x-auto custom-scrollbar pb-2 px-4">
-          {match.historyViewMode === 'sets' ? (
-            // Set History (Current Match)
-            (match.setHistory || []).map((set, i) => (
-              <div key={i} className="bg-white px-4 py-2 rounded-xl border border-white/10 flex flex-col items-center min-w-[80px] shadow-xl shrink-0">
-                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">Set {i + 1}</span>
-                <div className={`flex gap-2 font-bold text-lg ${match.sidesSwapped ? 'flex-row-reverse' : 'flex-row'}`}>
-                  <span style={{ color: team1.color }}>{set.team1}</span>
-                  <span className="text-zinc-200">|</span>
-                  <span style={{ color: team2.color }}>{set.team2}</span>
-                </div>
-              </div>
-            ))
-          ) : (
-            // Tournament History (Past Matches)
-            tournamentHistory.flatMap((hist, i) => {
-              const t1 = teams.find(t => t.id === hist.team1.id) || { color: '#fff', name: 'Time 1' };
-              const t2 = teams.find(t => t.id === hist.team2.id) || { color: '#fff', name: 'Time 2' };
-              
-              const setsToRender = hist.setHistory && hist.setHistory.length > 0 
-                ? hist.setHistory 
-                : [{ team1: hist.team1.score, team2: hist.team2.score }];
+      {/* Bottom Displays (Timeline & History) */}
+      <div className="absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 z-20 w-full max-w-[90vw]">
+        {/* Point Timeline */}
+        {match.pointHistory && match.pointHistory.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto custom-scrollbar px-5 py-3 items-center bg-zinc-900/90 rounded-full backdrop-blur-md border border-white/20 shadow-2xl max-w-full">
+            {match.pointHistory.map((teamNum, idx) => {
+              const teamColor = teamNum === 1 ? team1.color : team2.color;
+              return (
+                <div 
+                  key={idx}
+                  className="w-4 h-4 rounded-full shrink-0 shadow-sm border-2 border-white/90"
+                  style={{ backgroundColor: teamColor }}
+                  title={`Ponto ${idx + 1}`}
+                />
+              );
+            })}
+          </div>
+        )}
 
-              return setsToRender.map((set: any, setIndex: number) => (
-                <div key={`hist-${hist.id}-${i}-${setIndex}`} className="bg-white px-4 py-2 rounded-xl border border-white/10 flex flex-col items-center min-w-[80px] shadow-xl shrink-0">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">
-                    {hist.setHistory && hist.setHistory.length > 1 ? `P${i + 1} - Set ${setIndex + 1}` : `Partida ${i + 1}`}
-                  </span>
+        {/* Bottom History Display */}
+        {match.useSets && (
+          <div className="flex gap-4 overflow-x-auto custom-scrollbar pb-2 px-4 max-w-full">
+            {match.historyViewMode === 'sets' ? (
+              // Set History (Current Match)
+              (match.setHistory || []).map((set, i) => (
+                <div key={i} className="bg-white px-4 py-2 rounded-xl border border-white/10 flex flex-col items-center min-w-[80px] shadow-xl shrink-0">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">Set {i + 1}</span>
                   <div className={`flex gap-2 font-bold text-lg ${match.sidesSwapped ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <span style={{ color: t1.color }} title={t1.name}>{set.team1}</span>
+                    <span style={{ color: team1.color }}>{set.team1}</span>
                     <span className="text-zinc-200">|</span>
-                    <span style={{ color: t2.color }} title={t2.name}>{set.team2}</span>
+                    <span style={{ color: team2.color }}>{set.team2}</span>
                   </div>
                 </div>
-              ));
-            })
-          )}
-        </div>
-      )}
+              ))
+            ) : (
+              // Tournament History (Past Matches)
+              tournamentHistory.flatMap((hist, i) => {
+                const t1 = teams.find(t => t.id === hist.team1.id) || { color: '#fff', name: 'Time 1' };
+                const t2 = teams.find(t => t.id === hist.team2.id) || { color: '#fff', name: 'Time 2' };
+                
+                const setsToRender = hist.setHistory && hist.setHistory.length > 0 
+                  ? hist.setHistory 
+                  : [{ team1: hist.team1.score, team2: hist.team2.score }];
+
+                return setsToRender.map((set: any, setIndex: number) => (
+                  <div key={`hist-${hist.id}-${i}-${setIndex}`} className="bg-white px-4 py-2 rounded-xl border border-white/10 flex flex-col items-center min-w-[80px] shadow-xl shrink-0">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">
+                      {hist.setHistory && hist.setHistory.length > 1 ? `P${i + 1} - Set ${setIndex + 1}` : `Partida ${i + 1}`}
+                    </span>
+                    <div className={`flex gap-2 font-bold text-lg ${match.sidesSwapped ? 'flex-row-reverse' : 'flex-row'}`}>
+                      <span style={{ color: t1.color }} title={t1.name}>{set.team1}</span>
+                      <span className="text-zinc-200">|</span>
+                      <span style={{ color: t2.color }} title={t2.name}>{set.team2}</span>
+                    </div>
+                  </div>
+                ));
+              })
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Winner Overlay */}
       <AnimatePresence>
@@ -470,7 +511,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* Global Controls */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-6 z-20">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-row landscape:flex-col gap-4 landscape:gap-6 z-20">
         {match.showSwapButton && (
           <button 
             className="p-5 bg-black/40 backdrop-blur-xl rounded-full hover:bg-black/60 transition-all border border-white/10 shadow-2xl active:scale-90"
@@ -582,10 +623,10 @@ export default function App() {
                           style={{ backgroundColor: team.color }}
                         />
                         <span className="flex-1 font-bold text-lg">{team.name}</span>
-                        <div className="flex gap-1 opacity-100 transition-opacity">
+                        <div className="flex gap-2">
                           <button 
                             onClick={() => setEditingTeam(team)}
-                            className="p-2 hover:bg-white/10 text-zinc-400 hover:text-white rounded-lg transition-colors"
+                            className="p-3 bg-zinc-700/50 hover:bg-zinc-600 text-white rounded-xl transition-colors"
                           >
                             <SettingsIcon size={20} />
                           </button>
@@ -595,7 +636,7 @@ export default function App() {
                                 setTeams(teams.filter(t => t.id !== team.id));
                               }
                             }}
-                            className="p-2 hover:bg-red-500/20 text-zinc-500 hover:text-red-400 rounded-lg transition-colors"
+                            className="p-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl transition-colors"
                           >
                             <X size={20} />
                           </button>
@@ -826,15 +867,19 @@ export default function App() {
 
                       <div className="space-y-2">
                         <label className="text-sm text-zinc-500">Cor do Time</label>
-                        <div className="grid grid-cols-5 gap-3">
-                          {['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#6366f1', '#ec4899', '#8b5cf6', '#06b6d4', '#f43f5e', '#ffffff'].map(c => (
-                            <button 
-                              key={c}
-                              className={`w-full aspect-square rounded-lg border-2 transition-transform active:scale-90 ${editingTeam.color === c ? 'border-white scale-110' : 'border-transparent'}`}
-                              style={{ backgroundColor: c }}
-                              onClick={() => setEditingTeam({ ...editingTeam, color: c })}
-                            />
-                          ))}
+                        <div className="relative w-full h-16 rounded-xl overflow-hidden border-2 border-white/10 focus-within:border-blue-500 transition-colors">
+                          <input 
+                            type="color"
+                            value={editingTeam.color}
+                            onChange={(e) => setEditingTeam({ ...editingTeam, color: e.target.value })}
+                            className="absolute inset-[-10px] w-[calc(100%+20px)] h-[calc(100%+20px)] cursor-pointer opacity-0"
+                          />
+                          <div 
+                            className="w-full h-full flex items-center justify-center font-mono font-bold text-white drop-shadow-md pointer-events-none" 
+                            style={{ backgroundColor: editingTeam.color }}
+                          >
+                            {editingTeam.color.toUpperCase()}
+                          </div>
                         </div>
                       </div>
                     </div>
