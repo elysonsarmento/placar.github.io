@@ -1,6 +1,16 @@
-export const APP_VERSION = '1.1.9';
+export const APP_VERSION = '1.2.0';
 
 export const CHANGELOG = [
+  {
+    version: '1.2.0',
+    date: '08/04/2026',
+    features: [
+      'Adicionado Cronômetro (Progressivo e Regressivo) com controle de pausa e reset',
+      'Novo layout do topo: Cronômetro integrado entre os placares de sets',
+      'Correção de centralização: Linha divisória e botões agora ficam perfeitamente no centro da tela',
+      'Opção de configurar duração do tempo nas regras da partida'
+    ]
+  },
   {
     version: '1.1.9',
     date: '06/04/2026',

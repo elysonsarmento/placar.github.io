@@ -23,6 +23,9 @@ export interface MatchState {
   keepScreenAwake: boolean;
   stopAtSetPoint: boolean;
   useAdvantage: boolean;
+  useTimer: boolean;
+  timerMode: 'progressive' | 'regressive';
+  timerDuration: number;
 }
 
 export interface TournamentMatch {

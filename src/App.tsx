@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Settings as SettingsIcon, RotateCcw, Plus, Minus, X, Check, ChevronRight, ChevronLeft, ArrowLeftRight, Info, RefreshCw, Trash2 } from 'lucide-react';
+import { Settings as SettingsIcon, RotateCcw, Plus, Minus, X, Check, ChevronRight, ChevronLeft, ArrowLeftRight, Info, RefreshCw, Trash2, Play, Pause } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { Team, MatchState, TournamentMatch, DEFAULT_TEAMS } from './types';
@@ -62,6 +62,9 @@ export default function App() {
       keepScreenAwake: false,
       stopAtSetPoint: false,
       useAdvantage: true,
+      useTimer: false,
+      timerMode: 'progressive',
+      timerDuration: 0,
     };
     
     if (saved) {
@@ -81,6 +84,9 @@ export default function App() {
           keepScreenAwake: parsed.keepScreenAwake || false,
           stopAtSetPoint: parsed.stopAtSetPoint || false,
           useAdvantage: parsed.useAdvantage !== undefined ? parsed.useAdvantage : true,
+          useTimer: parsed.useTimer || false,
+          timerMode: parsed.timerMode || 'progressive',
+          timerDuration: parsed.timerDuration !== undefined ? parsed.timerDuration : 0,
         };
       } catch (e) {
         return defaultMatch;
@@ -100,10 +106,44 @@ export default function App() {
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isChangelogOpen, setIsChangelogOpen] = useState(false);
-  const [isProcessingSet, setIsProcessingSet] = useState(false);
+  const isProcessingSetRef = useRef(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
+
+  const [timerValue, setTimerValue] = useState(() => match.timerMode === 'regressive' ? match.timerDuration * 60 : 0);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+
+  useEffect(() => {
+    setTimerValue(match.timerMode === 'regressive' ? match.timerDuration * 60 : 0);
+    setIsTimerRunning(false);
+  }, [match.timerDuration, match.timerMode]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isTimerRunning) {
+      interval = setInterval(() => {
+        setTimerValue(prev => {
+          if (match.timerMode === 'regressive') {
+            if (prev <= 1) {
+              setIsTimerRunning(false);
+              return 0;
+            }
+            return prev - 1;
+          } else {
+            return prev + 1;
+          }
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isTimerRunning, match.timerMode]);
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     const lastSeen = localStorage.getItem('placar_last_version');
@@ -206,8 +246,8 @@ export default function App() {
   }, []);
 
   const nextSet = useCallback((winner: 1 | 2) => {
-    if (isProcessingSet) return;
-    setIsProcessingSet(true);
+    if (isProcessingSetRef.current) return;
+    isProcessingSetRef.current = true;
 
     setMatch((prev: MatchState) => ({
       ...prev,
@@ -220,8 +260,10 @@ export default function App() {
     }));
 
     // Reset processing state after a short delay to prevent double-clicks
-    setTimeout(() => setIsProcessingSet(false), 500);
-  }, [isProcessingSet]);
+    setTimeout(() => {
+      isProcessingSetRef.current = false;
+    }, 500);
+  }, []);
 
   const resetMatch = useCallback((force = false) => {
     const performReset = () => {
@@ -299,31 +341,58 @@ export default function App() {
 
   return (
     <div className="fixed top-0 left-0 w-[100vw] h-[100vh] text-white font-sans overflow-hidden select-none bg-black">
-      {/* Sets Display (Top Center) */}
-      {match.useSets && (
-        <div className="absolute top-[env(safe-area-inset-top)] left-1/2 -translate-x-1/2 flex gap-4 z-30 p-4 pt-8">
-          <div className={`flex gap-2 ${match.sidesSwapped ? 'flex-row-reverse' : 'flex-row'}`}>
-            <div 
-              className="bg-white px-6 py-2 rounded-xl border border-white/20 text-4xl font-black tabular-nums min-w-[80px] text-center shadow-xl"
-              style={{ color: team1.color }}
-            >
-              {match.team1Sets}
-            </div>
-            <div 
-              className="bg-white px-6 py-2 rounded-xl border border-white/20 text-4xl font-black tabular-nums min-w-[80px] text-center shadow-xl"
-              style={{ color: team2.color }}
-            >
-              {match.team2Sets}
-            </div>
+      {/* Top Center Displays (Sets & Timer) */}
+      <div className="absolute top-[env(safe-area-inset-top)] left-1/2 -translate-x-1/2 flex items-center justify-center gap-3 z-30 p-4 pt-8 w-full max-w-md">
+        {match.useSets && (
+          <div 
+            className="bg-white px-5 py-2 rounded-xl border border-white/20 text-3xl font-black tabular-nums min-w-[70px] text-center shadow-xl"
+            style={{ color: match.sidesSwapped ? team2.color : team1.color }}
+          >
+            {match.sidesSwapped ? match.team2Sets : match.team1Sets}
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Timer Display */}
+        {match.useTimer && (
+          <div 
+            className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20 text-2xl font-black tabular-nums text-center shadow-xl cursor-pointer hover:bg-black/80 transition-colors flex items-center gap-3"
+            onClick={() => setIsTimerRunning(!isTimerRunning)}
+          >
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-white/10 shrink-0">
+              {isTimerRunning ? <Pause size={16} className="fill-white" /> : <Play size={16} className="fill-white ml-1" />}
+            </div>
+            <span className={match.timerMode === 'regressive' && timerValue <= 60 ? 'text-red-400' : 'text-white'}>
+              {formatTime(timerValue)}
+            </span>
+            <button 
+              className="p-2 hover:bg-white/20 rounded-full transition-colors shrink-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                setTimerValue(match.timerMode === 'regressive' ? match.timerDuration * 60 : 0);
+                setIsTimerRunning(false);
+              }}
+              title="Zerar Cronômetro"
+            >
+              <RotateCcw size={16} />
+            </button>
+          </div>
+        )}
+
+        {match.useSets && (
+          <div 
+            className="bg-white px-5 py-2 rounded-xl border border-white/20 text-3xl font-black tabular-nums min-w-[70px] text-center shadow-xl"
+            style={{ color: match.sidesSwapped ? team1.color : team2.color }}
+          >
+            {match.sidesSwapped ? match.team1Sets : match.team2Sets}
+          </div>
+        )}
+      </div>
 
       {/* Main Scoreboard */}
       <div className={`flex h-full w-full ${match.sidesSwapped ? 'flex-col-reverse landscape:flex-row-reverse' : 'flex-col landscape:flex-row'}`}>
         {/* Team 1 Area */}
         <div 
-          className="relative flex-1 flex flex-col items-center justify-center cursor-pointer active:opacity-95 transition-all pt-28 pb-12 landscape:pt-[env(safe-area-inset-top)] landscape:pb-[env(safe-area-inset-bottom)]"
+          className="relative flex-1 min-h-0 min-w-0 flex flex-col items-center justify-center cursor-pointer active:opacity-95 transition-all pt-28 pb-12 landscape:pt-[env(safe-area-inset-top)] landscape:pb-[env(safe-area-inset-bottom)]"
           style={{ backgroundColor: team1.color }}
           onClick={() => !matchWinner && updateScore(1, 1)}
         >
@@ -372,7 +441,7 @@ export default function App() {
 
         {/* Team 2 Area */}
         <div 
-          className="relative flex-1 flex flex-col items-center justify-center cursor-pointer active:opacity-95 transition-all pt-12 pb-36 landscape:pt-[env(safe-area-inset-top)] landscape:pb-[env(safe-area-inset-bottom)]"
+          className="relative flex-1 min-h-0 min-w-0 flex flex-col items-center justify-center cursor-pointer active:opacity-95 transition-all pt-12 pb-36 landscape:pt-[env(safe-area-inset-top)] landscape:pb-[env(safe-area-inset-bottom)]"
           style={{ backgroundColor: team2.color }}
           onClick={() => !matchWinner && updateScore(2, 1)}
         >
@@ -688,6 +757,55 @@ export default function App() {
                         </button>
                       </div>
                     </div>
+
+                    <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-zinc-300">Mostrar Cronômetro</span>
+                        <span className="text-[10px] text-zinc-500">Exibe um cronômetro no topo da tela</span>
+                      </div>
+                      <button 
+                        onClick={() => setMatch(prev => ({ ...prev, useTimer: !prev.useTimer }))}
+                        className={`w-14 h-8 rounded-full transition-colors relative ${match.useTimer ? 'bg-blue-600' : 'bg-zinc-700'}`}
+                      >
+                        <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${match.useTimer ? 'left-7' : 'left-1'}`} />
+                      </button>
+                    </div>
+
+                    {match.useTimer && (
+                      <>
+                        <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-zinc-300">Modo do Cronômetro</span>
+                            <span className="text-[10px] text-zinc-500">
+                              {match.timerMode === 'progressive' ? 'Progressivo (inicia do zero)' : 'Regressivo (contagem regressiva)'}
+                            </span>
+                          </div>
+                          <button 
+                            onClick={() => setMatch(prev => ({ ...prev, timerMode: prev.timerMode === 'progressive' ? 'regressive' : 'progressive' }))}
+                            className={`w-14 h-8 rounded-full transition-colors relative ${match.timerMode === 'regressive' ? 'bg-blue-600' : 'bg-zinc-700'}`}
+                          >
+                            <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${match.timerMode === 'regressive' ? 'left-7' : 'left-1'}`} />
+                          </button>
+                        </div>
+
+                        {match.timerMode === 'regressive' && (
+                          <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
+                            <div className="flex flex-col">
+                              <span className="font-bold text-zinc-300">Duração (Minutos)</span>
+                              <span className="text-[10px] text-zinc-500">Tempo inicial da contagem regressiva</span>
+                            </div>
+                            <input 
+                              type="number" 
+                              min="1"
+                              max="120"
+                              value={match.timerDuration || 10}
+                              onChange={(e) => setMatch(prev => ({ ...prev, timerDuration: parseInt(e.target.value) || 10 }))}
+                              className="w-20 bg-zinc-700 border border-white/10 rounded-xl p-2 text-center text-lg font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                        )}
+                      </>
+                    )}
 
                     <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
                       <span className="font-bold text-zinc-300">Mostrar Nomes dos Times</span>
