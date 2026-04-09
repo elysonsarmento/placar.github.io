@@ -1,6 +1,16 @@
-export const APP_VERSION = '1.2.0';
+export const APP_VERSION = '1.2.1';
 
 export const CHANGELOG = [
+  {
+    version: '1.2.1',
+    date: '09/04/2026',
+    features: [
+      'Redesign completo do menu de configurações com navegação por abas (Partida, Times, Regras, Sistema)',
+      'Melhoria visual em todos os componentes de interface (inputs, botões, cards)',
+      'Otimização do layout para tablets e dispositivos móveis',
+      'Novas animações de transição entre seções de configuração'
+    ]
+  },
   {
     version: '1.2.0',
     date: '08/04/2026',

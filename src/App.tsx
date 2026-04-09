@@ -4,7 +4,11 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Settings as SettingsIcon, RotateCcw, Plus, Minus, X, Check, ChevronRight, ChevronLeft, ArrowLeftRight, Info, RefreshCw, Trash2, Play, Pause } from 'lucide-react';
+import { 
+  Settings as SettingsIcon, RotateCcw, Plus, Minus, X, Check, ChevronRight, ChevronLeft, 
+  ArrowLeftRight, Info, RefreshCw, Trash2, Play, Pause, Users, Trophy, Gamepad2, 
+  Monitor, Clock, History, Bell, Eye, EyeOff, Layers, ShieldCheck, Smartphone
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { Team, MatchState, TournamentMatch, DEFAULT_TEAMS } from './types';
@@ -110,6 +114,7 @@ export default function App() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
+  const [settingsTab, setSettingsTab] = useState<'match' | 'teams' | 'rules' | 'system'>('match');
 
   const [timerValue, setTimerValue] = useState(() => match.timerMode === 'regressive' ? match.timerDuration * 60 : 0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
@@ -342,30 +347,34 @@ export default function App() {
   return (
     <div className="fixed top-0 left-0 w-[100vw] h-[100vh] text-white font-sans overflow-hidden select-none bg-black">
       {/* Top Center Displays (Sets & Timer) */}
-      <div className="absolute top-[env(safe-area-inset-top)] left-1/2 -translate-x-1/2 flex items-center justify-center gap-3 z-30 p-4 pt-8 w-full max-w-md">
+      <div className="absolute top-[env(safe-area-inset-top)] left-1/2 -translate-x-1/2 flex items-center justify-center gap-4 z-30 p-4 pt-10 w-full max-w-2xl">
         {match.useSets && (
-          <div 
-            className="bg-white px-5 py-2 rounded-xl border border-white/20 text-3xl font-black tabular-nums min-w-[70px] text-center shadow-xl"
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-white px-6 py-3 rounded-2xl border-2 border-black/5 text-4xl font-black tabular-nums min-w-[85px] text-center shadow-2xl"
             style={{ color: match.sidesSwapped ? team2.color : team1.color }}
           >
             {match.sidesSwapped ? match.team2Sets : match.team1Sets}
-          </div>
+          </motion.div>
         )}
 
         {/* Timer Display */}
         {match.useTimer && (
-          <div 
-            className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20 text-2xl font-black tabular-nums text-center shadow-xl cursor-pointer hover:bg-black/80 transition-colors flex items-center gap-3"
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-zinc-900/90 backdrop-blur-2xl px-8 py-4 rounded-[2.5rem] border border-white/10 text-3xl font-black tabular-nums text-center shadow-[0_20px_50px_rgba(0,0,0,0.5)] cursor-pointer hover:bg-zinc-800 transition-all flex items-center gap-5 group"
             onClick={() => setIsTimerRunning(!isTimerRunning)}
           >
-            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-white/10 shrink-0">
-              {isTimerRunning ? <Pause size={16} className="fill-white" /> : <Play size={16} className="fill-white ml-1" />}
+            <div className={`flex items-center justify-center w-12 h-12 rounded-full transition-all shadow-inner ${isTimerRunning ? 'bg-red-500/20 text-red-500' : 'bg-green-500/20 text-green-500'}`}>
+              {isTimerRunning ? <Pause size={24} /> : <Play size={24} className="ml-1" />}
             </div>
-            <span className={match.timerMode === 'regressive' && timerValue <= 60 ? 'text-red-400' : 'text-white'}>
+            <span className={`${match.timerMode === 'regressive' && timerValue <= 60 ? 'text-red-500 animate-pulse' : 'text-white'} transition-colors drop-shadow-sm`}>
               {formatTime(timerValue)}
             </span>
             <button 
-              className="p-2 hover:bg-white/20 rounded-full transition-colors shrink-0"
+              className="p-2.5 hover:bg-white/10 rounded-full transition-colors text-zinc-600 hover:text-white"
               onClick={(e) => {
                 e.stopPropagation();
                 setTimerValue(match.timerMode === 'regressive' ? match.timerDuration * 60 : 0);
@@ -373,18 +382,20 @@ export default function App() {
               }}
               title="Zerar Cronômetro"
             >
-              <RotateCcw size={16} />
+              <RotateCcw size={20} />
             </button>
-          </div>
+          </motion.div>
         )}
 
         {match.useSets && (
-          <div 
-            className="bg-white px-5 py-2 rounded-xl border border-white/20 text-3xl font-black tabular-nums min-w-[70px] text-center shadow-xl"
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-white px-6 py-3 rounded-2xl border-2 border-black/5 text-4xl font-black tabular-nums min-w-[85px] text-center shadow-2xl"
             style={{ color: match.sidesSwapped ? team1.color : team2.color }}
           >
             {match.sidesSwapped ? match.team1Sets : match.team2Sets}
-          </div>
+          </motion.div>
         )}
       </div>
 
@@ -580,29 +591,29 @@ export default function App() {
       </AnimatePresence>
 
       {/* Global Controls */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-row landscape:flex-col gap-4 landscape:gap-6 z-20">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-row landscape:flex-col gap-6 landscape:gap-10 z-40">
         {match.showSwapButton && (
           <button 
-            className="p-5 bg-black/40 backdrop-blur-xl rounded-full hover:bg-black/60 transition-all border border-white/10 shadow-2xl active:scale-90"
+            className="w-20 h-20 landscape:w-24 landscape:h-24 bg-zinc-900/90 backdrop-blur-2xl rounded-full hover:bg-zinc-800 transition-all border-2 border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] active:scale-90 flex items-center justify-center group"
             onClick={() => setMatch(prev => ({ ...prev, sidesSwapped: !prev.sidesSwapped }))}
             title="Trocar Lados"
           >
-            <ArrowLeftRight size={36} />
+            <ArrowLeftRight size={40} className="text-zinc-400 group-hover:text-white transition-colors" />
           </button>
         )}
         <button 
-          className="p-5 bg-black/40 backdrop-blur-xl rounded-full hover:bg-black/60 transition-all border border-white/10 shadow-2xl active:scale-90"
+          className="w-20 h-20 landscape:w-24 landscape:h-24 bg-zinc-900/90 backdrop-blur-2xl rounded-full hover:bg-zinc-800 transition-all border-2 border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] active:scale-90 flex items-center justify-center group"
           onClick={() => setShowResetConfirm(true)}
           title="Zerar placar"
         >
-          <RotateCcw size={36} />
+          <RotateCcw size={40} className="text-zinc-400 group-hover:text-white transition-colors" />
         </button>
         <button 
-          className="p-5 bg-black/40 backdrop-blur-xl rounded-full hover:bg-black/60 transition-all border border-white/10 shadow-2xl active:scale-90"
+          className="w-20 h-20 landscape:w-24 landscape:h-24 bg-zinc-900/90 backdrop-blur-2xl rounded-full hover:bg-zinc-800 transition-all border-2 border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] active:scale-90 flex items-center justify-center group"
           onClick={() => setIsSettingsOpen(true)}
           title="Configurações"
         >
-          <SettingsIcon size={36} />
+          <SettingsIcon size={40} className="text-zinc-400 group-hover:text-white transition-colors" />
         </button>
       </div>
 
@@ -615,350 +626,473 @@ export default function App() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/95 backdrop-blur-2xl z-50 flex items-center justify-center p-8"
           >
-            <div className="bg-zinc-900 w-full max-w-5xl rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10 flex flex-col max-h-[92vh]">
-              <div className="p-8 border-b border-white/10 flex justify-between items-center bg-zinc-800/30">
-                <h2 className="text-3xl font-bold tracking-tight">Configurações do Jogo</h2>
+            <div className="bg-zinc-900 w-full max-w-6xl rounded-[3rem] overflow-hidden shadow-2xl border border-white/10 flex flex-col max-h-[90vh] relative">
+              {/* Header */}
+              <div className="p-8 border-b border-white/10 flex justify-between items-center bg-zinc-800/30 backdrop-blur-md z-10">
+                <div className="flex items-center gap-5">
+                  <div className="p-4 bg-blue-600/20 text-blue-400 rounded-2xl shadow-inner">
+                    <SettingsIcon size={32} />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-black tracking-tight text-white">Configurações</h2>
+                    <p className="text-zinc-500 text-sm font-medium">Personalize sua experiência no Placar Pro</p>
+                  </div>
+                </div>
                 <button 
                   onClick={() => setIsSettingsOpen(false)}
-                  className="p-3 hover:bg-white/10 rounded-full transition-colors"
+                  className="p-4 hover:bg-white/10 rounded-full transition-all hover:rotate-90 text-zinc-400 hover:text-white"
                 >
                   <X size={32} />
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-10 grid grid-cols-1 lg:grid-cols-2 gap-12">
-                <div className="space-y-12">
-                  {/* Match Setup */}
-                  <section className="space-y-8">
-                  <h3 className="text-sm font-black text-zinc-500 uppercase tracking-[0.2em]">Partida</h3>
-                  
-                  <div className="space-y-6">
-                    <div className="space-y-3">
-                      <label className="text-xs font-bold text-zinc-400 uppercase">Time da Esquerda</label>
-                      <select 
-                        className="w-full bg-zinc-800 border border-white/10 rounded-2xl p-5 text-xl appearance-none focus:ring-2 focus:ring-blue-500 outline-none"
-                        value={match.team1Id}
-                        onChange={(e) => handleTeamChange(1, e.target.value)}
-                      >
-                        {teams.map(t => (
-                          <option key={t.id} value={t.id}>{t.name}</option>
-                        ))}
-                      </select>
-                    </div>
+              <div className="flex-1 flex overflow-hidden">
+                {/* Sidebar Navigation */}
+                <div className="w-80 border-r border-white/10 bg-zinc-900/50 p-8 flex flex-col gap-3">
+                  <button 
+                    onClick={() => setSettingsTab('match')}
+                    className={`flex items-center gap-4 w-full p-5 rounded-2xl transition-all group ${settingsTab === 'match' ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/20' : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'}`}
+                  >
+                    <Trophy size={24} className={settingsTab === 'match' ? 'text-white' : 'group-hover:text-blue-400 transition-colors'} />
+                    <span className="font-bold text-lg">Partida</span>
+                  </button>
+                  <button 
+                    onClick={() => setSettingsTab('teams')}
+                    className={`flex items-center gap-4 w-full p-5 rounded-2xl transition-all group ${settingsTab === 'teams' ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/20' : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'}`}
+                  >
+                    <Users size={24} className={settingsTab === 'teams' ? 'text-white' : 'group-hover:text-blue-400 transition-colors'} />
+                    <span className="font-bold text-lg">Times</span>
+                  </button>
+                  <button 
+                    onClick={() => setSettingsTab('rules')}
+                    className={`flex items-center gap-4 w-full p-5 rounded-2xl transition-all group ${settingsTab === 'rules' ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/20' : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'}`}
+                  >
+                    <ShieldCheck size={24} className={settingsTab === 'rules' ? 'text-white' : 'group-hover:text-blue-400 transition-colors'} />
+                    <span className="font-bold text-lg">Regras</span>
+                  </button>
+                  <button 
+                    onClick={() => setSettingsTab('system')}
+                    className={`flex items-center gap-4 w-full p-5 rounded-2xl transition-all group ${settingsTab === 'system' ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/20' : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'}`}
+                  >
+                    <Monitor size={24} className={settingsTab === 'system' ? 'text-white' : 'group-hover:text-blue-400 transition-colors'} />
+                    <span className="font-bold text-lg">Sistema</span>
+                  </button>
 
-                    <div className="flex justify-center">
-                      <div className="px-4 py-2 rounded-full bg-zinc-800 text-zinc-500 font-black text-xs">VERSUS</div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <label className="text-xs font-bold text-zinc-400 uppercase">Time da Direita</label>
-                      <select 
-                        className="w-full bg-zinc-800 border border-white/10 rounded-2xl p-5 text-xl appearance-none focus:ring-2 focus:ring-blue-500 outline-none"
-                        value={match.team2Id}
-                        onChange={(e) => handleTeamChange(2, e.target.value)}
-                      >
-                        {teams.map(t => (
-                          <option key={t.id} value={t.id}>{t.name}</option>
-                        ))}
-                      </select>
+                  <div className="mt-auto pt-8 border-t border-white/5">
+                    <div className="p-6 bg-zinc-800/30 rounded-3xl border border-white/5">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Status do Sistema</span>
+                      </div>
+                      <p className="text-xs text-zinc-400 font-medium leading-relaxed">
+                        Versão {APP_VERSION} estável e pronta para uso.
+                      </p>
                     </div>
                   </div>
-                </section>
+                </div>
 
-                {/* Teams Management */}
-                <section className="space-y-8">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-sm font-black text-zinc-500 uppercase tracking-[0.2em]">Times</h3>
-                    <button 
-                      onClick={() => {
-                        const newTeam: Team = { id: Date.now().toString(), name: 'Novo Time', color: '#6366f1' };
-                        setTeams([...teams, newTeam]);
-                        setEditingTeam(newTeam);
-                      }}
-                      className="p-2 bg-blue-600 hover:bg-blue-500 rounded-xl transition-colors"
+                {/* Content Area */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-12 bg-zinc-900/30">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={settingsTab}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.2 }}
+                      className="max-w-3xl mx-auto space-y-12"
                     >
-                      <Plus size={24} />
-                    </button>
-                  </div>
+                      {settingsTab === 'match' && (
+                        <div className="space-y-10">
+                          <header>
+                            <h3 className="text-3xl font-black text-white mb-2">Configuração da Partida</h3>
+                            <p className="text-zinc-500">Defina os times e a estrutura da partida atual</p>
+                          </header>
 
-                  <div className="space-y-3">
-                    {teams.map(team => (
-                      <div 
-                        key={team.id}
-                        className="flex items-center gap-4 p-4 bg-zinc-800/40 rounded-2xl border border-white/5 group hover:border-white/20 transition-all"
-                      >
-                        <div 
-                          className="w-12 h-12 rounded-xl shadow-inner"
-                          style={{ backgroundColor: team.color }}
-                        />
-                        <span className="flex-1 font-bold text-lg">{team.name}</span>
-                        <div className="flex gap-2">
-                          <button 
-                            onClick={() => setEditingTeam(team)}
-                            className="p-3 bg-zinc-700/50 hover:bg-zinc-600 text-white rounded-xl transition-colors"
-                          >
-                            <SettingsIcon size={20} />
-                          </button>
-                          <button 
-                            onClick={() => {
-                              if (teams.length > 2) {
-                                setTeams(teams.filter(t => t.id !== team.id));
-                              }
-                            }}
-                            className="p-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl transition-colors"
-                          >
-                            <X size={20} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              </div>
+                          <div className="grid grid-cols-1 gap-8">
+                            <div className="grid grid-cols-[1fr,auto,1fr] items-center gap-6">
+                              <div className="space-y-4">
+                                <label className="text-xs font-black text-zinc-500 uppercase tracking-widest">Time Esquerda</label>
+                                <div className="relative group">
+                                  <select 
+                                    className="w-full bg-zinc-800 border-2 border-white/5 rounded-3xl p-6 text-xl font-bold appearance-none focus:border-blue-500 outline-none transition-all cursor-pointer pr-12"
+                                    value={match.team1Id}
+                                    onChange={(e) => handleTeamChange(1, e.target.value)}
+                                  >
+                                    {teams.map(t => (
+                                      <option key={t.id} value={t.id}>{t.name}</option>
+                                    ))}
+                                  </select>
+                                  <ChevronRight className="absolute right-6 top-1/2 -translate-y-1/2 text-zinc-600 group-hover:text-blue-400 transition-colors rotate-90" size={24} />
+                                </div>
+                              </div>
 
-              <div>
-                {/* Rules Setup */}
-                <section className="space-y-8">
-                  <h3 className="text-sm font-black text-zinc-500 uppercase tracking-[0.2em]">Regras</h3>
-                  
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-zinc-300">Novidades da Versão</span>
-                        <span className="text-[10px] text-zinc-500">Versão atual: {APP_VERSION}</span>
-                      </div>
-                      <div className="flex gap-2">
-                        {needRefresh && (
-                          <button 
-                            onClick={() => updateServiceWorker(true)}
-                            className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl transition-colors text-sm flex items-center gap-2 animate-pulse"
-                          >
-                            <RefreshCw size={16} />
-                            Atualizar App
-                          </button>
-                        )}
-                        {!needRefresh && (
-                          <button 
-                            onClick={checkForUpdates}
-                            className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-white font-bold rounded-xl transition-colors text-sm flex items-center gap-2"
-                          >
-                            <RefreshCw size={16} />
-                            Buscar
-                          </button>
-                        )}
-                        <button 
-                          onClick={() => {
-                            setIsSettingsOpen(false);
-                            setIsChangelogOpen(true);
-                          }}
-                          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors text-sm"
-                        >
-                          Ver Novidades
-                        </button>
-                      </div>
-                    </div>
+                              <div className="pt-8">
+                                <div className="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center border border-white/10 shadow-inner">
+                                  <span className="text-[10px] font-black text-zinc-600">VS</span>
+                                </div>
+                              </div>
 
-                    <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-zinc-300">Mostrar Cronômetro</span>
-                        <span className="text-[10px] text-zinc-500">Exibe um cronômetro no topo da tela</span>
-                      </div>
-                      <button 
-                        onClick={() => setMatch(prev => ({ ...prev, useTimer: !prev.useTimer }))}
-                        className={`w-14 h-8 rounded-full transition-colors relative ${match.useTimer ? 'bg-blue-600' : 'bg-zinc-700'}`}
-                      >
-                        <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${match.useTimer ? 'left-7' : 'left-1'}`} />
-                      </button>
-                    </div>
-
-                    {match.useTimer && (
-                      <>
-                        <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
-                          <div className="flex flex-col">
-                            <span className="font-bold text-zinc-300">Modo do Cronômetro</span>
-                            <span className="text-[10px] text-zinc-500">
-                              {match.timerMode === 'progressive' ? 'Progressivo (inicia do zero)' : 'Regressivo (contagem regressiva)'}
-                            </span>
-                          </div>
-                          <button 
-                            onClick={() => setMatch(prev => ({ ...prev, timerMode: prev.timerMode === 'progressive' ? 'regressive' : 'progressive' }))}
-                            className={`w-14 h-8 rounded-full transition-colors relative ${match.timerMode === 'regressive' ? 'bg-blue-600' : 'bg-zinc-700'}`}
-                          >
-                            <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${match.timerMode === 'regressive' ? 'left-7' : 'left-1'}`} />
-                          </button>
-                        </div>
-
-                        {match.timerMode === 'regressive' && (
-                          <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
-                            <div className="flex flex-col">
-                              <span className="font-bold text-zinc-300">Duração (Minutos)</span>
-                              <span className="text-[10px] text-zinc-500">Tempo inicial da contagem regressiva</span>
+                              <div className="space-y-4">
+                                <label className="text-xs font-black text-zinc-500 uppercase tracking-widest">Time Direita</label>
+                                <div className="relative group">
+                                  <select 
+                                    className="w-full bg-zinc-800 border-2 border-white/5 rounded-3xl p-6 text-xl font-bold appearance-none focus:border-blue-500 outline-none transition-all cursor-pointer pr-12"
+                                    value={match.team2Id}
+                                    onChange={(e) => handleTeamChange(2, e.target.value)}
+                                  >
+                                    {teams.map(t => (
+                                      <option key={t.id} value={t.id}>{t.name}</option>
+                                    ))}
+                                  </select>
+                                  <ChevronRight className="absolute right-6 top-1/2 -translate-y-1/2 text-zinc-600 group-hover:text-blue-400 transition-colors rotate-90" size={24} />
+                                </div>
+                              </div>
                             </div>
-                            <input 
-                              type="number" 
-                              min="1"
-                              max="120"
-                              value={match.timerDuration || 10}
-                              onChange={(e) => setMatch(prev => ({ ...prev, timerDuration: parseInt(e.target.value) || 10 }))}
-                              className="w-20 bg-zinc-700 border border-white/10 rounded-xl p-2 text-center text-lg font-bold outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                          </div>
-                        )}
-                      </>
-                    )}
 
-                    <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
-                      <span className="font-bold text-zinc-300">Mostrar Nomes dos Times</span>
-                      <button 
-                        onClick={() => setMatch(prev => ({ ...prev, displayTeamNames: !prev.displayTeamNames }))}
-                        className={`w-14 h-8 rounded-full transition-colors relative ${match.displayTeamNames ? 'bg-blue-600' : 'bg-zinc-700'}`}
-                      >
-                        <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${match.displayTeamNames ? 'left-7' : 'left-1'}`} />
-                      </button>
-                    </div>
+                            <div className="p-8 bg-zinc-800/50 rounded-[2.5rem] border border-white/5 space-y-8">
+                              <div className="flex items-center gap-4 mb-2">
+                                <div className="p-3 bg-purple-600/20 text-purple-400 rounded-2xl">
+                                  <Gamepad2 size={24} />
+                                </div>
+                                <h4 className="text-xl font-bold text-white">Estrutura do Jogo</h4>
+                              </div>
 
-                    <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-zinc-300">Modo de Histórico</span>
-                        <span className="text-[10px] text-zinc-500">
-                          {match.historyViewMode === 'sets' ? 'Mostrando Sets da Partida Atual' : 'Mostrando Partidas Anteriores'}
-                        </span>
-                      </div>
-                      <button 
-                        onClick={() => setMatch(prev => ({ ...prev, historyViewMode: prev.historyViewMode === 'sets' ? 'tournament' : 'sets' }))}
-                        className={`w-14 h-8 rounded-full transition-colors relative ${match.historyViewMode === 'tournament' ? 'bg-blue-600' : 'bg-zinc-700'}`}
-                      >
-                        <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${match.historyViewMode === 'tournament' ? 'left-7' : 'left-1'}`} />
-                      </button>
-                    </div>
+                              <div className="grid grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                  <label className="text-xs font-black text-zinc-500 uppercase tracking-widest">Melhor de (Sets)</label>
+                                  <div className="flex bg-zinc-900 rounded-2xl p-1.5 border border-white/5">
+                                    {[1, 3, 5].map(s => (
+                                      <button 
+                                        key={s}
+                                        onClick={() => setMatch(prev => ({ ...prev, maxSets: s }))}
+                                        className={`flex-1 py-4 rounded-xl font-black transition-all ${match.maxSets === s ? 'bg-white text-black shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                      >
+                                        {s}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
 
-                    <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-red-400">Limpar Torneio</span>
-                        <span className="text-[10px] text-zinc-500">Apaga todo o histórico de partidas anteriores</span>
-                      </div>
-                      <button 
-                        onClick={() => setShowClearConfirm(true)}
-                        className="p-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl transition-colors"
-                      >
-                        <Trash2 size={20} />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-zinc-300">Botão de Trocar Lados</span>
-                        <span className="text-[10px] text-zinc-500">Exibe o botão central de inversão</span>
-                      </div>
-                      <button 
-                        onClick={() => setMatch(prev => ({ ...prev, showSwapButton: !prev.showSwapButton }))}
-                        className={`w-14 h-8 rounded-full transition-colors relative ${match.showSwapButton ? 'bg-blue-600' : 'bg-zinc-700'}`}
-                      >
-                        <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${match.showSwapButton ? 'left-7' : 'left-1'}`} />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-zinc-300">Vantagem (2 pontos)</span>
-                        <span className="text-[10px] text-zinc-500">Exige diferença de 2 pontos para fechar</span>
-                      </div>
-                      <button 
-                        onClick={() => setMatch(prev => ({ ...prev, useAdvantage: !prev.useAdvantage }))}
-                        className={`w-14 h-8 rounded-full transition-colors relative ${match.useAdvantage ? 'bg-blue-600' : 'bg-zinc-700'}`}
-                      >
-                        <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${match.useAdvantage ? 'left-7' : 'left-1'}`} />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-zinc-300">Travar Placar no Set</span>
-                        <span className="text-[10px] text-zinc-500">Impede pontos extras após atingir o limite</span>
-                      </div>
-                      <button 
-                        onClick={() => setMatch(prev => ({ ...prev, stopAtSetPoint: !prev.stopAtSetPoint }))}
-                        className={`w-14 h-8 rounded-full transition-colors relative ${match.stopAtSetPoint ? 'bg-blue-600' : 'bg-zinc-700'}`}
-                      >
-                        <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${match.stopAtSetPoint ? 'left-7' : 'left-1'}`} />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-zinc-300">Manter Tela Ligada</span>
-                        <span className="text-[10px] text-zinc-500">Evita que o dispositivo bloqueie a tela</span>
-                      </div>
-                      <button 
-                        onClick={() => setMatch(prev => ({ ...prev, keepScreenAwake: !prev.keepScreenAwake }))}
-                        className={`w-14 h-8 rounded-full transition-colors relative ${match.keepScreenAwake ? 'bg-blue-600' : 'bg-zinc-700'}`}
-                      >
-                        <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${match.keepScreenAwake ? 'left-7' : 'left-1'}`} />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-white/5">
-                      <span className="font-bold text-zinc-300">Usar Sets</span>
-                      <button 
-                        onClick={() => setMatch(prev => ({ ...prev, useSets: !prev.useSets }))}
-                        className={`w-14 h-8 rounded-full transition-colors relative ${match.useSets ? 'bg-blue-600' : 'bg-zinc-700'}`}
-                      >
-                        <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${match.useSets ? 'left-7' : 'left-1'}`} />
-                      </button>
-                    </div>
-
-                    {match.useSets && (
-                      <>
-                        <div className="space-y-3">
-                          <label className="text-xs font-bold text-zinc-400 uppercase">Melhor de (Sets)</label>
-                          <div className="grid grid-cols-4 gap-2">
-                            {[1, 3, 5].map(s => (
-                              <button 
-                                key={s}
-                                onClick={() => setMatch(prev => ({ ...prev, maxSets: s }))}
-                                className={`p-4 rounded-xl font-bold transition-all ${match.maxSets === s ? 'bg-white text-black' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
-                              >
-                                {s}
-                              </button>
-                            ))}
-                            <input 
-                              type="number"
-                              placeholder="Outro"
-                              className="bg-zinc-800 border border-white/10 rounded-xl p-4 font-bold text-center outline-none focus:ring-2 focus:ring-blue-500"
-                              value={match.maxSets}
-                              onChange={(e) => setMatch(prev => ({ ...prev, maxSets: parseInt(e.target.value) || 0 }))}
-                            />
+                                <div className="space-y-4">
+                                  <label className="text-xs font-black text-zinc-500 uppercase tracking-widest">Pontos por Set</label>
+                                  <div className="flex bg-zinc-900 rounded-2xl p-1.5 border border-white/5">
+                                    {[15, 21, 25].map(p => (
+                                      <button 
+                                        key={p}
+                                        onClick={() => setMatch(prev => ({ ...prev, pointsToWinSet: p }))}
+                                        className={`flex-1 py-4 rounded-xl font-black transition-all ${match.pointsToWinSet === p ? 'bg-white text-black shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                      >
+                                        {p}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
+                      )}
 
-                        <div className="space-y-3">
-                          <label className="text-xs font-bold text-zinc-400 uppercase">Pontos por Set</label>
-                          <div className="grid grid-cols-2 gap-2">
-                            {[15, 21, 25, 30].map(p => (
-                              <button 
-                                key={p}
-                                onClick={() => setMatch(prev => ({ ...prev, pointsToWinSet: p }))}
-                                className={`p-4 rounded-xl font-bold transition-all ${match.pointsToWinSet === p ? 'bg-white text-black' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
+                      {settingsTab === 'teams' && (
+                        <div className="space-y-10">
+                          <header className="flex justify-between items-end">
+                            <div>
+                              <h3 className="text-3xl font-black text-white mb-2">Gerenciar Times</h3>
+                              <p className="text-zinc-500">Adicione ou edite os times disponíveis</p>
+                            </div>
+                            <button 
+                              onClick={() => {
+                                const newTeam: Team = { id: Date.now().toString(), name: 'Novo Time', color: '#6366f1' };
+                                setTeams([...teams, newTeam]);
+                                setEditingTeam(newTeam);
+                              }}
+                              className="flex items-center gap-2 px-6 py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl transition-all shadow-lg shadow-blue-600/20"
+                            >
+                              <Plus size={20} /> Novo Time
+                            </button>
+                          </header>
+
+                          <div className="grid grid-cols-1 gap-4">
+                            {teams.map(team => (
+                              <div 
+                                key={team.id}
+                                className="flex items-center gap-6 p-6 bg-zinc-800/40 rounded-[2rem] border border-white/5 group hover:border-white/20 transition-all"
                               >
-                                {p}
-                              </button>
+                                <div 
+                                  className="w-16 h-16 rounded-2xl shadow-2xl border-4 border-white/10"
+                                  style={{ backgroundColor: team.color }}
+                                />
+                                <div className="flex-1">
+                                  <span className="block font-black text-xl text-white">{team.name}</span>
+                                  <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">{team.color.toUpperCase()}</span>
+                                </div>
+                                <div className="flex gap-3">
+                                  <button 
+                                    onClick={() => setEditingTeam(team)}
+                                    className="p-4 bg-zinc-700/50 hover:bg-zinc-600 text-white rounded-2xl transition-all hover:scale-105"
+                                  >
+                                    <SettingsIcon size={24} />
+                                  </button>
+                                  <button 
+                                    onClick={() => {
+                                      if (teams.length > 2) {
+                                        setTeams(teams.filter(t => t.id !== team.id));
+                                      }
+                                    }}
+                                    className="p-4 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-2xl transition-all hover:scale-105"
+                                  >
+                                    <Trash2 size={24} />
+                                  </button>
+                                </div>
+                              </div>
                             ))}
-                            <input 
-                              type="number"
-                              placeholder="Customizado"
-                              className="col-span-2 bg-zinc-800 border border-white/10 rounded-xl p-4 font-bold text-center outline-none focus:ring-2 focus:ring-blue-500"
-                              value={match.pointsToWinSet}
-                              onChange={(e) => setMatch(prev => ({ ...prev, pointsToWinSet: parseInt(e.target.value) || 0 }))}
-                            />
                           </div>
                         </div>
-                      </>
-                    )}
-                  </div>
-                </section>
+                      )}
+
+                      {settingsTab === 'rules' && (
+                        <div className="space-y-10">
+                          <header>
+                            <h3 className="text-3xl font-black text-white mb-2">Regras e Display</h3>
+                            <p className="text-zinc-500">Ajuste o comportamento e a interface do placar</p>
+                          </header>
+
+                          <div className="grid grid-cols-1 gap-6">
+                            {/* Timer Section */}
+                            <div className="p-8 bg-zinc-800/50 rounded-[2.5rem] border border-white/5 space-y-8">
+                              <div className="flex items-center gap-4">
+                                <div className="p-3 bg-blue-600/20 text-blue-400 rounded-2xl">
+                                  <Clock size={24} />
+                                </div>
+                                <h4 className="text-xl font-bold text-white">Cronômetro</h4>
+                              </div>
+
+                              <div className="space-y-6">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex flex-col">
+                                    <span className="font-bold text-zinc-200">Ativar Cronômetro</span>
+                                    <span className="text-xs text-zinc-500">Exibe o tempo no topo da tela</span>
+                                  </div>
+                                  <button 
+                                    onClick={() => setMatch(prev => ({ ...prev, useTimer: !prev.useTimer }))}
+                                    className={`w-16 h-9 rounded-full transition-all relative ${match.useTimer ? 'bg-blue-600' : 'bg-zinc-700'}`}
+                                  >
+                                    <div className={`absolute top-1.5 w-6 h-6 bg-white rounded-full shadow-lg transition-all ${match.useTimer ? 'left-8.5' : 'left-1.5'}`} />
+                                  </button>
+                                </div>
+
+                                {match.useTimer && (
+                                  <motion.div 
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    className="space-y-6 pt-6 border-t border-white/5"
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex flex-col">
+                                        <span className="font-bold text-zinc-200">Modo do Tempo</span>
+                                        <span className="text-xs text-zinc-500">Progressivo ou Regressivo</span>
+                                      </div>
+                                      <div className="flex bg-zinc-900 rounded-xl p-1">
+                                        <button 
+                                          onClick={() => setMatch(prev => ({ ...prev, timerMode: 'progressive' }))}
+                                          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${match.timerMode === 'progressive' ? 'bg-zinc-700 text-white' : 'text-zinc-500'}`}
+                                        >
+                                          Progressivo
+                                        </button>
+                                        <button 
+                                          onClick={() => setMatch(prev => ({ ...prev, timerMode: 'regressive' }))}
+                                          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${match.timerMode === 'regressive' ? 'bg-zinc-700 text-white' : 'text-zinc-500'}`}
+                                        >
+                                          Regressivo
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    {match.timerMode === 'regressive' && (
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex flex-col">
+                                          <span className="font-bold text-zinc-200">Duração Inicial</span>
+                                          <span className="text-xs text-zinc-500">Minutos para contagem</span>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                          <button 
+                                            onClick={() => setMatch(prev => ({ ...prev, timerDuration: Math.max(1, prev.timerDuration - 1) }))}
+                                            className="p-2 bg-zinc-700 rounded-lg hover:bg-zinc-600"
+                                          >
+                                            <Minus size={16} />
+                                          </button>
+                                          <span className="text-xl font-black w-12 text-center">{match.timerDuration}</span>
+                                          <button 
+                                            onClick={() => setMatch(prev => ({ ...prev, timerDuration: prev.timerDuration + 1 }))}
+                                            className="p-2 bg-zinc-700 rounded-lg hover:bg-zinc-600"
+                                          >
+                                            <Plus size={16} />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </motion.div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Gameplay Rules */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="p-6 bg-zinc-800/50 rounded-3xl border border-white/5 space-y-6">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex flex-col">
+                                    <span className="font-bold text-zinc-200">Vantagem</span>
+                                    <span className="text-[10px] text-zinc-500 uppercase">Diferença de 2 pts</span>
+                                  </div>
+                                  <button 
+                                    onClick={() => setMatch(prev => ({ ...prev, useAdvantage: !prev.useAdvantage }))}
+                                    className={`w-12 h-7 rounded-full transition-all relative ${match.useAdvantage ? 'bg-blue-600' : 'bg-zinc-700'}`}
+                                  >
+                                    <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all ${match.useAdvantage ? 'left-6' : 'left-1'}`} />
+                                  </button>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex flex-col">
+                                    <span className="font-bold text-zinc-200">Travar Placar</span>
+                                    <span className="text-[10px] text-zinc-500 uppercase">No Set Point</span>
+                                  </div>
+                                  <button 
+                                    onClick={() => setMatch(prev => ({ ...prev, stopAtSetPoint: !prev.stopAtSetPoint }))}
+                                    className={`w-12 h-7 rounded-full transition-all relative ${match.stopAtSetPoint ? 'bg-blue-600' : 'bg-zinc-700'}`}
+                                  >
+                                    <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all ${match.stopAtSetPoint ? 'left-6' : 'left-1'}`} />
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="p-6 bg-zinc-800/50 rounded-3xl border border-white/5 space-y-6">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex flex-col">
+                                    <span className="font-bold text-zinc-200">Nomes dos Times</span>
+                                    <span className="text-[10px] text-zinc-500 uppercase">Sempre Visíveis</span>
+                                  </div>
+                                  <button 
+                                    onClick={() => setMatch(prev => ({ ...prev, displayTeamNames: !prev.displayTeamNames }))}
+                                    className={`w-12 h-7 rounded-full transition-all relative ${match.displayTeamNames ? 'bg-blue-600' : 'bg-zinc-700'}`}
+                                  >
+                                    <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all ${match.displayTeamNames ? 'left-6' : 'left-1'}`} />
+                                  </button>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex flex-col">
+                                    <span className="font-bold text-zinc-200">Trocar Lados</span>
+                                    <span className="text-[10px] text-zinc-500 uppercase">Botão Central</span>
+                                  </div>
+                                  <button 
+                                    onClick={() => setMatch(prev => ({ ...prev, showSwapButton: !prev.showSwapButton }))}
+                                    className={`w-12 h-7 rounded-full transition-all relative ${match.showSwapButton ? 'bg-blue-600' : 'bg-zinc-700'}`}
+                                  >
+                                    <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all ${match.showSwapButton ? 'left-6' : 'left-1'}`} />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {settingsTab === 'system' && (
+                        <div className="space-y-10">
+                          <header>
+                            <h3 className="text-3xl font-black text-white mb-2">Sistema e Manutenção</h3>
+                            <p className="text-zinc-500">Informações do app e ferramentas de dados</p>
+                          </header>
+
+                          <div className="grid grid-cols-1 gap-6">
+                            <div className="flex items-center justify-between p-8 bg-zinc-800/50 rounded-[2.5rem] border border-white/5">
+                              <div className="flex items-center gap-5">
+                                <div className="p-4 bg-blue-600/20 text-blue-400 rounded-2xl">
+                                  <Bell size={28} />
+                                </div>
+                                <div>
+                                  <span className="block font-black text-xl text-white">Versão do Aplicativo</span>
+                                  <span className="text-sm text-zinc-500 font-medium">Build v{APP_VERSION}</span>
+                                </div>
+                              </div>
+                              <button 
+                                onClick={() => {
+                                  setIsSettingsOpen(false);
+                                  setIsChangelogOpen(true);
+                                }}
+                                className="px-6 py-3 bg-zinc-700 hover:bg-zinc-600 text-white font-bold rounded-xl transition-all"
+                              >
+                                Changelog
+                              </button>
+                            </div>
+
+                            <button 
+                              onClick={checkForUpdates}
+                              className="flex items-center justify-between p-6 bg-zinc-800/50 rounded-3xl border border-white/5 hover:bg-zinc-800 transition-all group"
+                            >
+                              <div className="flex items-center gap-4">
+                                <div className="p-3 bg-green-600/20 text-green-500 rounded-2xl">
+                                  <RefreshCw size={20} />
+                                </div>
+                                <div className="flex flex-col text-left">
+                                  <span className="font-bold text-zinc-200">Atualizações</span>
+                                  <span className="text-[10px] text-zinc-500 uppercase">Verificar nova versão</span>
+                                </div>
+                              </div>
+                              <ChevronRight size={20} className="text-zinc-600 group-hover:text-white transition-colors" />
+                            </button>
+
+                            <div className="flex items-center justify-between p-6 bg-zinc-800/50 rounded-3xl border border-white/5">
+                              <div className="flex items-center gap-4">
+                                <div className="p-3 bg-purple-600/20 text-purple-500 rounded-2xl">
+                                  <History size={20} />
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="font-bold text-zinc-200">Modo de Histórico</span>
+                                  <span className="text-[10px] text-zinc-500 uppercase">Sets ou Torneio</span>
+                                </div>
+                              </div>
+                              <div className="flex bg-zinc-900 rounded-xl p-1">
+                                <button 
+                                  onClick={() => setMatch(prev => ({ ...prev, historyViewMode: 'sets' }))}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${match.historyViewMode === 'sets' ? 'bg-purple-600 text-white' : 'text-zinc-500'}`}
+                                >
+                                  Sets
+                                </button>
+                                <button 
+                                  onClick={() => setMatch(prev => ({ ...prev, historyViewMode: 'tournament' }))}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${match.historyViewMode === 'tournament' ? 'bg-purple-600 text-white' : 'text-zinc-500'}`}
+                                >
+                                  Torneio
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="p-8 bg-red-500/5 rounded-[2.5rem] border border-red-500/10 space-y-6">
+                              <div className="flex items-center gap-4">
+                                <div className="p-3 bg-red-500/20 text-red-500 rounded-2xl">
+                                  <Trash2 size={24} />
+                                </div>
+                                <h4 className="text-xl font-bold text-red-500">Zona de Perigo</h4>
+                              </div>
+                              <p className="text-sm text-zinc-500 leading-relaxed">
+                                A limpeza do torneio apagará permanentemente todo o histórico de partidas salvas. Esta ação não pode ser desfeita.
+                              </p>
+                              <button 
+                                onClick={() => setShowClearConfirm(true)}
+                                className="w-full py-5 bg-red-600 hover:bg-red-500 text-white font-black rounded-2xl transition-all shadow-lg shadow-red-600/20 flex items-center justify-center gap-3"
+                              >
+                                <Trash2 size={20} /> Limpar Todos os Dados
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
               </div>
             </div>
-          </div>
 
           {/* Team Edit Overlay */}
             <AnimatePresence>
