@@ -17,9 +17,9 @@ export interface MatchState {
   pointHistory: (1 | 2)[];
   useSets: boolean;
   displayTeamNames: boolean;
-  historyViewMode: 'sets' | 'tournament';
   sidesSwapped: boolean;
   showSwapButton: boolean;
+  showWinnerOverlay: boolean;
   keepScreenAwake: boolean;
   stopAtSetPoint: boolean;
   useAdvantage: boolean;

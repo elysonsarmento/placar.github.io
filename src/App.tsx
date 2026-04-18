@@ -60,9 +60,9 @@ export default function App() {
       pointHistory: [],
       useSets: true,
       displayTeamNames: false,
-      historyViewMode: 'sets',
       sidesSwapped: false,
       showSwapButton: true,
+      showWinnerOverlay: true,
       keepScreenAwake: false,
       stopAtSetPoint: false,
       useAdvantage: true,
@@ -82,9 +82,9 @@ export default function App() {
           pointHistory: parsed.pointHistory || [],
           useSets: parsed.useSets !== undefined ? parsed.useSets : true,
           displayTeamNames: parsed.displayTeamNames !== undefined ? parsed.displayTeamNames : false,
-          historyViewMode: parsed.historyViewMode || 'sets',
           sidesSwapped: parsed.sidesSwapped || false,
           showSwapButton: parsed.showSwapButton !== undefined ? parsed.showSwapButton : true,
+          showWinnerOverlay: parsed.showWinnerOverlay !== undefined ? parsed.showWinnerOverlay : true,
           keepScreenAwake: parsed.keepScreenAwake || false,
           stopAtSetPoint: parsed.stopAtSetPoint || false,
           useAdvantage: parsed.useAdvantage !== undefined ? parsed.useAdvantage : true,
@@ -114,7 +114,7 @@ export default function App() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
-  const [settingsTab, setSettingsTab] = useState<'match' | 'teams' | 'rules' | 'system'>('match');
+  const [settingsTab, setSettingsTab] = useState<'match' | 'teams' | 'rules' | 'history' | 'system'>('match');
 
   const [timerValue, setTimerValue] = useState(() => match.timerMode === 'regressive' ? match.timerDuration * 60 : 0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
@@ -238,7 +238,11 @@ export default function App() {
         }
       }
 
-      return { ...prev, [scoreKey]: newScore, pointHistory: newPointHistory };
+      return { 
+        ...prev, 
+        [scoreKey]: newScore, 
+        pointHistory: newPointHistory
+      };
     });
   }, []);
 
@@ -272,30 +276,31 @@ export default function App() {
 
   const resetMatch = useCallback((force = false) => {
     const performReset = () => {
-      setMatch((prev: MatchState) => {
-        if (prev.team1Score > 0 || prev.team2Score > 0 || prev.team1Sets > 0 || prev.team2Sets > 0) {
-          const finalSetHistory = (prev.team1Score > 0 || prev.team2Score > 0) 
-            ? [...prev.setHistory, { team1: prev.team1Score, team2: prev.team2Score }]
-            : prev.setHistory;
+      // Save current match to history if there's any score BEFORE resetting
+      if (match.team1Score > 0 || match.team2Score > 0 || match.team1Sets > 0 || match.team2Sets > 0) {
+        const finalSetHistory = (match.team1Score > 0 || match.team2Score > 0) 
+          ? [...match.setHistory, { team1: match.team1Score, team2: match.team2Score }]
+          : match.setHistory;
 
-          setTournamentHistory((th: TournamentMatch[]) => [...th, {
-            id: Date.now().toString(),
-            date: new Date().toISOString(),
-            team1: { id: prev.team1Id, score: prev.team1Score, sets: prev.team1Sets },
-            team2: { id: prev.team2Id, score: prev.team2Score, sets: prev.team2Sets },
-            setHistory: finalSetHistory
-          }]);
-        }
-        return {
-          ...prev,
-          team1Score: 0,
-          team2Score: 0,
-          team1Sets: 0,
-          team2Sets: 0,
-          setHistory: [],
-          pointHistory: [],
-        };
-      });
+        setTournamentHistory((th: TournamentMatch[]) => [...th, {
+          id: crypto.randomUUID(),
+          date: new Date().toISOString(),
+          team1: { id: match.team1Id, score: match.team1Score, sets: match.team1Sets },
+          team2: { id: match.team2Id, score: match.team2Score, sets: match.team2Sets },
+          setHistory: finalSetHistory
+        }]);
+      }
+
+      // Then reset the match
+      setMatch((prev: MatchState) => ({
+        ...prev,
+        team1Score: 0,
+        team2Score: 0,
+        team1Sets: 0,
+        team2Sets: 0,
+        setHistory: [],
+        pointHistory: [],
+      }));
     };
 
     if (force) {
@@ -303,46 +308,50 @@ export default function App() {
     } else {
       performReset();
     }
-  }, []);
+  }, [match]);
 
   const handleTeamChange = useCallback((teamIndex: 1 | 2, newTeamId: string) => {
-    setMatch((prev: MatchState) => {
-      // Save current match to history if there's any score
-      if (prev.team1Score > 0 || prev.team2Score > 0 || prev.team1Sets > 0 || prev.team2Sets > 0) {
-        const finalSetHistory = (prev.team1Score > 0 || prev.team2Score > 0) 
-          ? [...prev.setHistory, { team1: prev.team1Score, team2: prev.team2Score }]
-          : prev.setHistory;
+    // Save current match to history if there's any score BEFORE changing teams
+    if (match.team1Score > 0 || match.team2Score > 0 || match.team1Sets > 0 || match.team2Sets > 0) {
+      const finalSetHistory = (match.team1Score > 0 || match.team2Score > 0) 
+        ? [...match.setHistory, { team1: match.team1Score, team2: match.team2Score }]
+        : match.setHistory;
 
-        setTournamentHistory((th: TournamentMatch[]) => [...th, {
-          id: Date.now().toString(),
-          date: new Date().toISOString(),
-          team1: { id: prev.team1Id, score: prev.team1Score, sets: prev.team1Sets },
-          team2: { id: prev.team2Id, score: prev.team2Score, sets: prev.team2Sets },
-          setHistory: finalSetHistory
-        }]);
-      }
-      
-      return {
-        ...prev,
-        [teamIndex === 1 ? 'team1Id' : 'team2Id']: newTeamId,
-        team1Score: 0,
-        team2Score: 0,
-        team1Sets: 0,
-        team2Sets: 0,
-        setHistory: [],
-        pointHistory: [],
-      };
-    });
-  }, []);
+      setTournamentHistory((th: TournamentMatch[]) => [...th, {
+        id: crypto.randomUUID(),
+        date: new Date().toISOString(),
+        team1: { id: match.team1Id, score: match.team1Score, sets: match.team1Sets },
+        team2: { id: match.team2Id, score: match.team2Score, sets: match.team2Sets },
+        setHistory: finalSetHistory
+      }]);
+    }
+    
+    // Then reset and apply the new team
+    setMatch((prev: MatchState) => ({
+      ...prev,
+      [teamIndex === 1 ? 'team1Id' : 'team2Id']: newTeamId,
+      team1Score: 0,
+      team2Score: 0,
+      team1Sets: 0,
+      team2Sets: 0,
+      setHistory: [],
+      pointHistory: [],
+    }));
+  }, [match]);
 
   const team1 = teams.find(t => t.id === match.team1Id) || teams[0];
   const team2 = teams.find(t => t.id === match.team2Id) || teams[1];
 
-  const team1WinsSet = match.useSets && match.team1Score >= match.pointsToWinSet && (!match.useAdvantage || match.team1Score >= match.team2Score + 2);
-  const team2WinsSet = match.useSets && match.team2Score >= match.pointsToWinSet && (!match.useAdvantage || match.team2Score >= match.team1Score + 2);
+  const team1WinsSet = match.team1Score >= match.pointsToWinSet && (!match.useAdvantage || match.team1Score >= match.team2Score + 2);
+  const team2WinsSet = match.team2Score >= match.pointsToWinSet && (!match.useAdvantage || match.team2Score >= match.team1Score + 2);
 
   const setsToWin = Math.ceil(match.maxSets / 2);
-  const matchWinner = match.useSets ? (match.team1Sets >= setsToWin ? 1 : match.team2Sets >= setsToWin ? 2 : null) : null;
+  const matchWinner = match.useSets 
+    ? (match.team1Sets >= setsToWin ? 1 : match.team2Sets >= setsToWin ? 2 : null) 
+    : (team1WinsSet ? 1 : team2WinsSet ? 2 : null);
+
+  const showTeam1CloseBtn = team1WinsSet && (match.useSets ? !matchWinner : !match.showWinnerOverlay);
+  const showTeam2CloseBtn = team2WinsSet && (match.useSets ? !matchWinner : !match.showWinnerOverlay);
 
   return (
     <div className="fixed top-0 left-0 w-[100vw] h-[100vh] text-white font-sans overflow-hidden select-none bg-black">
@@ -364,17 +373,17 @@ export default function App() {
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-zinc-900/90 backdrop-blur-2xl px-8 py-4 rounded-[2.5rem] border border-white/10 text-3xl font-black tabular-nums text-center shadow-[0_20px_50px_rgba(0,0,0,0.5)] cursor-pointer hover:bg-zinc-800 transition-all flex items-center gap-5 group"
+            className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20 text-2xl font-black tabular-nums text-center shadow-xl cursor-pointer hover:bg-black/80 transition-colors flex items-center gap-3"
             onClick={() => setIsTimerRunning(!isTimerRunning)}
           >
-            <div className={`flex items-center justify-center w-12 h-12 rounded-full transition-all shadow-inner ${isTimerRunning ? 'bg-red-500/20 text-red-500' : 'bg-green-500/20 text-green-500'}`}>
-              {isTimerRunning ? <Pause size={24} /> : <Play size={24} className="ml-1" />}
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-white/10 shrink-0">
+              {isTimerRunning ? <Pause size={16} className="fill-white" /> : <Play size={16} className="fill-white ml-1" />}
             </div>
-            <span className={`${match.timerMode === 'regressive' && timerValue <= 60 ? 'text-red-500 animate-pulse' : 'text-white'} transition-colors drop-shadow-sm`}>
+            <span className={match.timerMode === 'regressive' && timerValue <= 60 ? 'text-red-400' : 'text-white'}>
               {formatTime(timerValue)}
             </span>
             <button 
-              className="p-2.5 hover:bg-white/10 rounded-full transition-colors text-zinc-600 hover:text-white"
+              className="p-2 hover:bg-white/20 rounded-full transition-colors shrink-0"
               onClick={(e) => {
                 e.stopPropagation();
                 setTimerValue(match.timerMode === 'regressive' ? match.timerDuration * 60 : 0);
@@ -382,7 +391,7 @@ export default function App() {
               }}
               title="Zerar Cronômetro"
             >
-              <RotateCcw size={20} />
+              <RotateCcw size={16} />
             </button>
           </motion.div>
         )}
@@ -408,26 +417,34 @@ export default function App() {
           onClick={() => !matchWinner && updateScore(1, 1)}
         >
           {match.displayTeamNames && (
-            <div className="absolute top-[calc(4rem+env(safe-area-inset-top))] text-4xl font-bold uppercase tracking-[0.3em] opacity-90 drop-shadow-md">
+            <div className="absolute top-[calc(4rem+env(safe-area-inset-top))] text-4xl font-bold uppercase tracking-[0.3em] opacity-90 drop-shadow-md z-10">
               {team1.name}
             </div>
           )}
           
-          <div className={`font-black leading-none tabular-nums drop-shadow-2xl transition-all duration-300 ${match.team1Score >= 100 ? 'text-[6rem] landscape:text-[14rem]' : match.team1Score >= 10 ? 'text-[10rem] landscape:text-[20rem]' : 'text-[12rem] landscape:text-[32rem]'}`}>
-            {match.team1Score}
+          <div className="relative z-10 flex flex-col items-center">
+            <motion.div 
+              key={match.team1Score}
+              initial={{ opacity: 0, y: 40, scale: 0.8 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              className={`font-black leading-none tabular-nums drop-shadow-2xl transition-all duration-300 ${match.team1Score >= 100 ? 'text-[6rem] landscape:text-[14rem]' : match.team1Score >= 10 ? 'text-[10rem] landscape:text-[20rem]' : 'text-[12rem] landscape:text-[32rem]'}`}
+            >
+              {match.team1Score}
+            </motion.div>
           </div>
 
           {/* Next Set Button Overlay */}
           <AnimatePresence>
-            {team1WinsSet && !matchWinner && (
+            {showTeam1CloseBtn && (
               <motion.button
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 20, scale: 0.9 }}
                 className="absolute top-1/2 -translate-y-1/2 bg-white text-black px-12 py-6 rounded-full font-black text-2xl shadow-2xl hover:scale-105 active:scale-95 transition-transform z-30"
                 onClick={(e) => {
                   e.stopPropagation();
-                  nextSet(1);
+                  if (match.useSets) nextSet(1);
+                  else resetMatch(true);
                 }}
               >
                 FECHAR SET
@@ -437,13 +454,13 @@ export default function App() {
 
           {/* Decrement Button */}
           <button 
-            className={`absolute bottom-4 landscape:bottom-[calc(6rem+env(safe-area-inset-bottom))] ${match.sidesSwapped ? 'right-4 landscape:right-8' : 'left-4 landscape:left-8'} p-4 landscape:p-6 bg-black/20 rounded-full hover:bg-black/40 transition-colors border border-white/5 z-20`}
+            className={`absolute bottom-4 landscape:bottom-[calc(6rem+env(safe-area-inset-bottom))] ${match.sidesSwapped ? 'right-4 landscape:right-8' : 'left-4 landscape:left-8'} p-4 landscape:p-6 bg-black/20 rounded-full hover:bg-black/40 transition-colors border border-white/5 z-20 active:scale-90`}
             onClick={(e) => {
               e.stopPropagation();
               updateScore(1, -1);
             }}
           >
-            <Minus className="w-8 h-8 landscape:w-12 landscape:h-12" />
+            <Minus className="w-8 h-8 landscape:w-12 landscape:h-12 text-white" />
           </button>
         </div>
 
@@ -457,26 +474,34 @@ export default function App() {
           onClick={() => !matchWinner && updateScore(2, 1)}
         >
           {match.displayTeamNames && (
-            <div className="absolute top-[calc(4rem+env(safe-area-inset-top))] text-4xl font-bold uppercase tracking-[0.3em] opacity-90 drop-shadow-md">
+            <div className="absolute top-[calc(4rem+env(safe-area-inset-top))] text-4xl font-bold uppercase tracking-[0.3em] opacity-90 drop-shadow-md z-10">
               {team2.name}
             </div>
           )}
           
-          <div className={`font-black leading-none tabular-nums drop-shadow-2xl transition-all duration-300 ${match.team2Score >= 100 ? 'text-[6rem] landscape:text-[14rem]' : match.team2Score >= 10 ? 'text-[10rem] landscape:text-[20rem]' : 'text-[12rem] landscape:text-[32rem]'}`}>
-            {match.team2Score}
+          <div className="relative z-10 flex flex-col items-center">
+            <motion.div 
+              key={match.team2Score}
+              initial={{ opacity: 0, y: 40, scale: 0.8 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              className={`font-black leading-none tabular-nums drop-shadow-2xl transition-all duration-300 ${match.team2Score >= 100 ? 'text-[6rem] landscape:text-[14rem]' : match.team2Score >= 10 ? 'text-[10rem] landscape:text-[20rem]' : 'text-[12rem] landscape:text-[32rem]'}`}
+            >
+              {match.team2Score}
+            </motion.div>
           </div>
 
           {/* Next Set Button Overlay */}
           <AnimatePresence>
-            {team2WinsSet && !matchWinner && (
+            {showTeam2CloseBtn && (
               <motion.button
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 20, scale: 0.9 }}
                 className="absolute top-1/2 -translate-y-1/2 bg-white text-black px-12 py-6 rounded-full font-black text-2xl shadow-2xl hover:scale-105 active:scale-95 transition-transform z-30"
                 onClick={(e) => {
                   e.stopPropagation();
-                  nextSet(2);
+                  if (match.useSets) nextSet(2);
+                  else resetMatch(true);
                 }}
               >
                 FECHAR SET
@@ -486,13 +511,13 @@ export default function App() {
 
           {/* Decrement Button */}
           <button 
-            className={`absolute bottom-4 landscape:bottom-[calc(6rem+env(safe-area-inset-bottom))] ${match.sidesSwapped ? 'left-4 landscape:left-8' : 'right-4 landscape:right-8'} p-4 landscape:p-6 bg-black/20 rounded-full hover:bg-black/40 transition-colors border border-white/5 z-20`}
+            className={`absolute bottom-4 landscape:bottom-[calc(6rem+env(safe-area-inset-bottom))] ${match.sidesSwapped ? 'left-4 landscape:left-8' : 'right-4 landscape:right-8'} p-4 landscape:p-6 bg-black/20 rounded-full hover:bg-black/40 transition-colors border border-white/5 z-20 active:scale-90`}
             onClick={(e) => {
               e.stopPropagation();
               updateScore(2, -1);
             }}
           >
-            <Minus className="w-8 h-8 landscape:w-12 landscape:h-12" />
+            <Minus className="w-8 h-8 landscape:w-12 landscape:h-12 text-white" />
           </button>
         </div>
       </div>
@@ -517,55 +542,37 @@ export default function App() {
         )}
 
         {/* Bottom History Display */}
-        {match.useSets && (
-          <div className="flex gap-4 overflow-x-auto custom-scrollbar pb-2 px-4 max-w-full">
-            {match.historyViewMode === 'sets' ? (
-              // Set History (Current Match)
-              (match.setHistory || []).map((set, i) => (
-                <div key={i} className="bg-white px-4 py-2 rounded-xl border border-white/10 flex flex-col items-center min-w-[80px] shadow-xl shrink-0">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">Set {i + 1}</span>
-                  <div className={`flex gap-2 font-bold text-lg ${match.sidesSwapped ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <span style={{ color: team1.color }}>{set.team1}</span>
-                    <span className="text-zinc-200">|</span>
-                    <span style={{ color: team2.color }}>{set.team2}</span>
-                  </div>
-                </div>
-              ))
-            ) : (
-              // Tournament History (Past Matches)
-              tournamentHistory.flatMap((hist, i) => {
-                const t1 = teams.find(t => t.id === hist.team1.id) || { color: '#fff', name: 'Time 1' };
-                const t2 = teams.find(t => t.id === hist.team2.id) || { color: '#fff', name: 'Time 2' };
-                
-                const setsToRender = hist.setHistory && hist.setHistory.length > 0 
-                  ? hist.setHistory 
-                  : [{ team1: hist.team1.score, team2: hist.team2.score }];
-
-                return setsToRender.map((set: any, setIndex: number) => (
-                  <div key={`hist-${hist.id}-${i}-${setIndex}`} className="bg-white px-4 py-2 rounded-xl border border-white/10 flex flex-col items-center min-w-[80px] shadow-xl shrink-0">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">
-                      {hist.setHistory && hist.setHistory.length > 1 ? `P${i + 1} - Set ${setIndex + 1}` : `Partida ${i + 1}`}
-                    </span>
+        {match.useSets && match.setHistory && match.setHistory.length > 0 && (
+          <div className="w-full flex flex-col items-center gap-2">
+            <div className="flex items-center justify-center w-full max-w-xs px-2">
+               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
+                Sets da Partida Atual
+               </span>
+            </div>
+            
+            <div className="flex gap-4 overflow-x-auto custom-scrollbar pb-2 px-4 max-w-full">
+                {(match.setHistory || []).map((set, i) => (
+                  <div key={i} className="bg-white px-4 py-2 rounded-xl border border-white/10 flex flex-col items-center min-w-[80px] shadow-xl shrink-0">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">Set {i + 1}</span>
                     <div className={`flex gap-2 font-bold text-lg ${match.sidesSwapped ? 'flex-row-reverse' : 'flex-row'}`}>
-                      <span style={{ color: t1.color }} title={t1.name}>{set.team1}</span>
+                      <span style={{ color: team1.color }}>{set.team1}</span>
                       <span className="text-zinc-200">|</span>
-                      <span style={{ color: t2.color }} title={t2.name}>{set.team2}</span>
+                      <span style={{ color: team2.color }}>{set.team2}</span>
                     </div>
                   </div>
-                ));
-              })
-            )}
+                ))}
+            </div>
           </div>
         )}
       </div>
 
       {/* Winner Overlay */}
       <AnimatePresence>
-        {matchWinner && (
+        {matchWinner && match.showWinnerOverlay && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="fixed inset-0 z-40 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center"
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center"
           >
             <motion.div
               initial={{ scale: 0.5, y: 50 }}
@@ -591,31 +598,33 @@ export default function App() {
       </AnimatePresence>
 
       {/* Global Controls */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-row landscape:flex-col gap-6 landscape:gap-10 z-40">
-        {match.showSwapButton && (
+      {!(matchWinner && match.showWinnerOverlay) && (
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-row landscape:flex-col gap-4 landscape:gap-6 z-40">
+          {match.showSwapButton && (
+            <button 
+              className="p-5 bg-black/40 backdrop-blur-xl rounded-full hover:bg-black/60 transition-all border border-white/10 shadow-2xl active:scale-90"
+              onClick={() => setMatch(prev => ({ ...prev, sidesSwapped: !prev.sidesSwapped }))}
+              title="Trocar Lados"
+            >
+              <ArrowLeftRight size={36} />
+            </button>
+          )}
           <button 
-            className="w-20 h-20 landscape:w-24 landscape:h-24 bg-zinc-900/90 backdrop-blur-2xl rounded-full hover:bg-zinc-800 transition-all border-2 border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] active:scale-90 flex items-center justify-center group"
-            onClick={() => setMatch(prev => ({ ...prev, sidesSwapped: !prev.sidesSwapped }))}
-            title="Trocar Lados"
+            className="p-5 bg-black/40 backdrop-blur-xl rounded-full hover:bg-black/60 transition-all border border-white/10 shadow-2xl active:scale-90"
+            onClick={() => setShowResetConfirm(true)}
+            title="Zerar placar"
           >
-            <ArrowLeftRight size={40} className="text-zinc-400 group-hover:text-white transition-colors" />
+            <RotateCcw size={36} />
           </button>
-        )}
-        <button 
-          className="w-20 h-20 landscape:w-24 landscape:h-24 bg-zinc-900/90 backdrop-blur-2xl rounded-full hover:bg-zinc-800 transition-all border-2 border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] active:scale-90 flex items-center justify-center group"
-          onClick={() => setShowResetConfirm(true)}
-          title="Zerar placar"
-        >
-          <RotateCcw size={40} className="text-zinc-400 group-hover:text-white transition-colors" />
-        </button>
-        <button 
-          className="w-20 h-20 landscape:w-24 landscape:h-24 bg-zinc-900/90 backdrop-blur-2xl rounded-full hover:bg-zinc-800 transition-all border-2 border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] active:scale-90 flex items-center justify-center group"
-          onClick={() => setIsSettingsOpen(true)}
-          title="Configurações"
-        >
-          <SettingsIcon size={40} className="text-zinc-400 group-hover:text-white transition-colors" />
-        </button>
-      </div>
+          <button 
+            className="p-5 bg-black/40 backdrop-blur-xl rounded-full hover:bg-black/60 transition-all border border-white/10 shadow-2xl active:scale-90"
+            onClick={() => setIsSettingsOpen(true)}
+            title="Configurações"
+          >
+            <SettingsIcon size={36} />
+          </button>
+        </div>
+      )}
 
       {/* Settings Modal */}
       <AnimatePresence>
@@ -669,6 +678,13 @@ export default function App() {
                   >
                     <ShieldCheck size={24} className={settingsTab === 'rules' ? 'text-white' : 'group-hover:text-blue-400 transition-colors'} />
                     <span className="font-bold text-lg">Regras</span>
+                  </button>
+                  <button 
+                    onClick={() => setSettingsTab('history')}
+                    className={`flex items-center gap-4 w-full p-5 rounded-2xl transition-all group ${settingsTab === 'history' ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/20' : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'}`}
+                  >
+                    <History size={24} className={settingsTab === 'history' ? 'text-white' : 'group-hover:text-blue-400 transition-colors'} />
+                    <span className="font-bold text-lg">Histórico</span>
                   </button>
                   <button 
                     onClick={() => setSettingsTab('system')}
@@ -758,36 +774,63 @@ export default function App() {
                                 <h4 className="text-xl font-bold text-white">Estrutura do Jogo</h4>
                               </div>
 
-                              <div className="grid grid-cols-2 gap-8">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-4">
-                                  <label className="text-xs font-black text-zinc-500 uppercase tracking-widest">Melhor de (Sets)</label>
+                                  <label className="text-xs font-black text-zinc-500 uppercase tracking-widest">Modo de Jogo</label>
                                   <div className="flex bg-zinc-900 rounded-2xl p-1.5 border border-white/5">
-                                    {[1, 3, 5].map(s => (
-                                      <button 
-                                        key={s}
-                                        onClick={() => setMatch(prev => ({ ...prev, maxSets: s }))}
-                                        className={`flex-1 py-4 rounded-xl font-black transition-all ${match.maxSets === s ? 'bg-white text-black shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
-                                      >
-                                        {s}
-                                      </button>
-                                    ))}
+                                    <button 
+                                      onClick={() => setMatch(prev => ({ ...prev, useSets: true }))}
+                                      className={`flex-1 py-4 rounded-xl font-black transition-all text-sm ${match.useSets ? 'bg-white text-black shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                    >
+                                      Por Sets
+                                    </button>
+                                    <button 
+                                      onClick={() => setMatch(prev => ({ ...prev, useSets: false }))}
+                                      className={`flex-1 py-4 rounded-xl font-black transition-all text-sm ${!match.useSets ? 'bg-white text-black shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                    >
+                                      Apenas Pontos
+                                    </button>
+                                  </div>
+                                </div>
+                                <div className="space-y-4">
+                                  <label className="text-xs font-black text-zinc-500 uppercase tracking-widest">{match.useSets ? 'Pontos por Set' : 'Pontos para Vencer'}</label>
+                                  <div className="flex items-center justify-between bg-zinc-900 rounded-2xl p-1.5 border border-white/5">
+                                    <button 
+                                      onClick={() => setMatch(prev => ({ ...prev, pointsToWinSet: Math.max(1, prev.pointsToWinSet - 1) }))}
+                                      className="p-3 text-zinc-500 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+                                    >
+                                      <Minus size={20} />
+                                    </button>
+                                    <span className="font-black text-xl text-white w-12 text-center">{match.pointsToWinSet}</span>
+                                    <button 
+                                      onClick={() => setMatch(prev => ({ ...prev, pointsToWinSet: match.pointsToWinSet + 1 }))}
+                                      className="p-3 text-zinc-500 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+                                    >
+                                      <Plus size={20} />
+                                    </button>
                                   </div>
                                 </div>
 
-                                <div className="space-y-4">
-                                  <label className="text-xs font-black text-zinc-500 uppercase tracking-widest">Pontos por Set</label>
-                                  <div className="flex bg-zinc-900 rounded-2xl p-1.5 border border-white/5">
-                                    {[15, 21, 25].map(p => (
+                                {match.useSets && (
+                                  <div className="space-y-4 md:col-span-2">
+                                    <label className="text-xs font-black text-zinc-500 uppercase tracking-widest">Melhor de (Sets)</label>
+                                    <div className="flex items-center justify-between bg-zinc-900 rounded-2xl p-1.5 border border-white/5 max-w-[50%]">
                                       <button 
-                                        key={p}
-                                        onClick={() => setMatch(prev => ({ ...prev, pointsToWinSet: p }))}
-                                        className={`flex-1 py-4 rounded-xl font-black transition-all ${match.pointsToWinSet === p ? 'bg-white text-black shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                        onClick={() => setMatch(prev => ({ ...prev, maxSets: Math.max(1, prev.maxSets - 1) }))}
+                                        className="p-3 text-zinc-500 hover:text-white hover:bg-white/10 rounded-xl transition-all"
                                       >
-                                        {p}
+                                        <Minus size={20} />
                                       </button>
-                                    ))}
+                                      <span className="font-black text-xl text-white w-12 text-center">{match.maxSets}</span>
+                                      <button 
+                                        onClick={() => setMatch(prev => ({ ...prev, maxSets: match.maxSets + 1 }))}
+                                        className="p-3 text-zinc-500 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+                                      >
+                                        <Plus size={20} />
+                                      </button>
+                                    </div>
                                   </div>
-                                </div>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -803,7 +846,7 @@ export default function App() {
                             </div>
                             <button 
                               onClick={() => {
-                                const newTeam: Team = { id: Date.now().toString(), name: 'Novo Time', color: '#6366f1' };
+                                const newTeam: Team = { id: crypto.randomUUID(), name: 'Novo Time', color: '#6366f1' };
                                 setTeams([...teams, newTeam]);
                                 setEditingTeam(newTeam);
                               }}
@@ -991,9 +1034,98 @@ export default function App() {
                                     <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all ${match.showSwapButton ? 'left-6' : 'left-1'}`} />
                                   </button>
                                 </div>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex flex-col">
+                                    <span className="font-bold text-zinc-200">Tela de Vencedor</span>
+                                    <span className="text-[10px] text-zinc-500 uppercase">Fim de jogo</span>
+                                  </div>
+                                  <button 
+                                    onClick={() => setMatch(prev => ({ ...prev, showWinnerOverlay: !prev.showWinnerOverlay }))}
+                                    className={`w-12 h-7 rounded-full transition-all relative ${match.showWinnerOverlay ? 'bg-blue-600' : 'bg-zinc-700'}`}
+                                  >
+                                    <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all ${match.showWinnerOverlay ? 'left-6' : 'left-1'}`} />
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </div>
+                        </div>
+                      )}
+
+                      {settingsTab === 'history' && (
+                        <div className="space-y-10">
+                          <header className="flex justify-between items-end">
+                            <div>
+                              <h3 className="text-3xl font-black text-white mb-2">Histórico de Partidas</h3>
+                              <p className="text-zinc-500">Registros de jogos anteriores e resultados</p>
+                            </div>
+                            {tournamentHistory.length > 0 && (
+                              <button 
+                                onClick={() => setShowClearConfirm(true)}
+                                className="px-6 py-3 bg-red-600/10 text-red-500 hover:bg-red-600 hover:text-white rounded-2xl font-black text-xs uppercase transition-all flex items-center gap-2"
+                              >
+                                <Trash2 size={16} /> Limpar Tudo
+                              </button>
+                            )}
+                          </header>
+
+                          {tournamentHistory.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-20 bg-zinc-800/20 rounded-[3rem] border border-white/5 space-y-4">
+                              <History size={64} className="text-zinc-700" />
+                              <p className="text-zinc-500 font-bold uppercase tracking-widest">Nenhuma partida registrada</p>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {tournamentHistory.slice().reverse().map((hist, i) => {
+                                const t1 = teams.find(t => t.id === hist.team1.id) || { color: '#fff', name: 'Time 1' };
+                                const t2 = teams.find(t => t.id === hist.team2.id) || { color: '#fff', name: 'Time 2' };
+                                
+                                const date = new Date(hist.date).toLocaleDateString();
+                                const time = new Date(hist.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                                return (
+                                  <div key={`${hist.id}-${i}`} className="bg-zinc-800/50 p-6 rounded-[2rem] border border-white/5 space-y-4 shadow-xl">
+                                    <div className="flex justify-between items-center pb-4 border-b border-white/5">
+                                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{date} • {time}</span>
+                                      <span className="text-[10px] font-black uppercase tracking-widest text-blue-500 bg-blue-500/10 px-2.5 py-1 rounded-full">Partida {tournamentHistory.length - i}</span>
+                                    </div>
+                                    
+                                    <div className="flex items-center justify-between gap-4">
+                                      <div className="flex-1 flex flex-col items-center gap-2">
+                                        <div className="w-12 h-12 rounded-2xl shadow-lg border-2 border-white/10" style={{ backgroundColor: t1.color }} />
+                                        <span className="font-bold text-sm text-center truncate w-full">{t1.name}</span>
+                                      </div>
+
+                                      <div className="flex flex-col items-center justify-center space-y-1">
+                                         <div className="text-3xl font-black tabular-nums tracking-tighter">
+                                           {hist.team1.sets} - {hist.team2.sets}
+                                         </div>
+                                         <span className="text-[10px] font-black text-zinc-500 uppercase">Sets</span>
+                                      </div>
+
+                                      <div className="flex-1 flex flex-col items-center gap-2">
+                                        <div className="w-12 h-12 rounded-2xl shadow-lg border-2 border-white/10" style={{ backgroundColor: t2.color }} />
+                                        <span className="font-bold text-sm text-center truncate w-full">{t2.name}</span>
+                                      </div>
+                                    </div>
+
+                                    {hist.setHistory && hist.setHistory.length > 0 && (
+                                      <div className="pt-4 flex flex-wrap gap-2 justify-center border-t border-white/5">
+                                        {hist.setHistory.map((set, idx) => (
+                                          <div key={idx} className="bg-zinc-900/50 px-3 py-1.5 rounded-xl border border-white/5 text-[10px] font-bold">
+                                            <span className="text-zinc-500 mr-1.5 font-black uppercase">S{idx + 1}</span>
+                                            <span style={{ color: t1.color }}>{set.team1}</span>
+                                            <span className="mx-1 text-zinc-700">|</span>
+                                            <span style={{ color: t2.color }}>{set.team2}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -1041,32 +1173,6 @@ export default function App() {
                               </div>
                               <ChevronRight size={20} className="text-zinc-600 group-hover:text-white transition-colors" />
                             </button>
-
-                            <div className="flex items-center justify-between p-6 bg-zinc-800/50 rounded-3xl border border-white/5">
-                              <div className="flex items-center gap-4">
-                                <div className="p-3 bg-purple-600/20 text-purple-500 rounded-2xl">
-                                  <History size={20} />
-                                </div>
-                                <div className="flex flex-col">
-                                  <span className="font-bold text-zinc-200">Modo de Histórico</span>
-                                  <span className="text-[10px] text-zinc-500 uppercase">Sets ou Torneio</span>
-                                </div>
-                              </div>
-                              <div className="flex bg-zinc-900 rounded-xl p-1">
-                                <button 
-                                  onClick={() => setMatch(prev => ({ ...prev, historyViewMode: 'sets' }))}
-                                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${match.historyViewMode === 'sets' ? 'bg-purple-600 text-white' : 'text-zinc-500'}`}
-                                >
-                                  Sets
-                                </button>
-                                <button 
-                                  onClick={() => setMatch(prev => ({ ...prev, historyViewMode: 'tournament' }))}
-                                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${match.historyViewMode === 'tournament' ? 'bg-purple-600 text-white' : 'text-zinc-500'}`}
-                                >
-                                  Torneio
-                                </button>
-                              </div>
-                            </div>
 
                             <div className="p-8 bg-red-500/5 rounded-[2.5rem] border border-red-500/10 space-y-6">
                               <div className="flex items-center gap-4">
@@ -1161,7 +1267,6 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Reset Match Confirmation Modal */}
       <AnimatePresence>
         {showResetConfirm && (
           <motion.div 
@@ -1176,25 +1281,44 @@ export default function App() {
               exit={{ scale: 0.9, y: 20 }}
               className="bg-zinc-900 border border-white/10 p-8 rounded-3xl max-w-sm w-full shadow-2xl"
             >
-              <h3 className="text-2xl font-bold text-white mb-3">Zerar Placar?</h3>
+              <h3 className="text-2xl font-bold text-white mb-3">Nova Partida?</h3>
               <p className="text-zinc-400 text-sm mb-8 leading-relaxed">
-                Tem certeza que deseja zerar o placar da partida atual?
+                Ao iniciar uma nova partida, o placar atual será salvo no histórico do torneio.
               </p>
-              <div className="flex gap-3">
-                <button 
-                  onClick={() => setShowResetConfirm(false)}
-                  className="flex-1 py-4 rounded-xl font-bold bg-zinc-800 text-white hover:bg-zinc-700 transition-colors"
-                >
-                  Cancelar
-                </button>
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => setShowResetConfirm(false)}
+                    className="flex-1 py-4 rounded-xl font-bold bg-zinc-800 text-white hover:bg-zinc-700 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    onClick={() => {
+                      resetMatch(true);
+                      setShowResetConfirm(false);
+                    }}
+                    className="flex-[1.5] py-4 rounded-xl font-black bg-white text-black hover:bg-zinc-200 transition-colors"
+                  >
+                    Sim, Zerar
+                  </button>
+                </div>
                 <button 
                   onClick={() => {
-                    resetMatch(true);
+                    setMatch(prev => ({
+                      ...prev,
+                      team1Score: 0,
+                      team2Score: 0,
+                      team1Sets: 0,
+                      team2Sets: 0,
+                      setHistory: [],
+                      pointHistory: [],
+                    }));
                     setShowResetConfirm(false);
                   }}
-                  className="flex-1 py-4 rounded-xl font-bold bg-red-600 text-white hover:bg-red-500 transition-colors"
+                  className="w-full py-4 rounded-xl font-bold text-xs bg-zinc-800/50 text-zinc-500 hover:text-red-400 transition-colors"
                 >
-                  Sim, zerar
+                  Apenas reiniciar (sem salvar histórico)
                 </button>
               </div>
             </motion.div>

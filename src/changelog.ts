@@ -1,6 +1,43 @@
-export const APP_VERSION = '1.2.1';
+export const APP_VERSION = '1.2.5';
 
 export const CHANGELOG = [
+  {
+    version: '1.2.5',
+    date: '18/04/2026',
+    features: [
+      'Histórico em Configurações: O histórico de partidas foi movido para uma aba dedicada nas configurações para um placar mais limpo',
+      'Visualização Detalhada: O novo histórico em configurações permite ver data, hora e placar de cada set de jogos passados',
+      'Placar Minimalista: O rodapé do placar agora mostra apenas os sets da partida atual se necessário'
+    ]
+  },
+  {
+    version: '1.2.4',
+    date: '18/04/2026',
+    features: [
+      'Nova opção de Reset: Agora você pode escolher entre "Zerar e Salvar" ou "Apenas Reiniciar" sem sujar o histórico',
+      'Controle de Histórico: Adicionado botão de lixeira diretamente no rodapé para limpar partidas passadas',
+      'Interface Clara: Rótulos melhorados no histórico inferior para diferenciar "Sets Atuais" de "Partidas Passadas"'
+    ]
+  },
+  {
+    version: '1.2.3',
+    date: '18/04/2026',
+    features: [
+      'Revisão visual: Cores e gradients revertidos para o estilo clássico a pedido do usuário',
+      'Manutençao: Efeitos de animação e transições suaves preservados'
+    ]
+  },
+  {
+    version: '1.2.2',
+    date: '09/04/2026',
+    features: [
+      'Redesign completo do placar: novos cards de pontuação com profundidade visual',
+      'Indicador de Saque: agora é possível marcar qual time está sacando',
+      'Animações suaves nas mudanças de pontuação',
+      'Gradients dinâmicos nos fundos dos times para maior contraste e modernidade',
+      'Botão de "Definir Saque" acessível ao passar o mouse/tocar no nome do time'
+    ]
+  },
   {
     version: '1.2.1',
     date: '09/04/2026',
